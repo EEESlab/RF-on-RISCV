@@ -3,8 +3,8 @@ from joblib import dump, load
 import numpy as np
 import os 
 
-from dataset_utils import dataset_selection
-from data_utils import dump_params, dump_test_data
+from utils_dataset import dataset_selection
+from utils_data import dump_params, dump_test_data
 from DT_Naive import dump_DT_Naive_kernel
 from DT_Loop import dump_DT_Loop_kernel
 from DT_Rec import dump_DT_Rec_kernel
@@ -69,4 +69,4 @@ def dump_RF(exploration, kernel):
 	if (kernel == 'DT-Rec'):
 		dump_DT_Rec_kernel(model,[kernel_c,kernel_h],n_classes,dataset)
 	if (kernel == 'DT-Arr'):
-		dump_DT_Arr_kernel(model,n_classes,dataset,[f_bytewidth,f_dtype],[in_bytewidth,in_dtype],[kernel_c,kernel_h])
+		dump_DT_Arr_kernel_shiftless(model,n_classes,dataset,[f_bytewidth,f_dtype],[in_bytewidth,in_dtype],[kernel_c,kernel_h])

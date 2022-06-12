@@ -4,7 +4,7 @@ from joblib import dump, load
 import numpy as np
 import os
 
-from dataset import dataset_selection
+from utils_dataset import dataset_selection
 
 
 def rf_train(params = {"n_estimators":1}, dataset = ['digits'], exploration = 'test'):
@@ -19,7 +19,7 @@ def rf_train(params = {"n_estimators":1}, dataset = ['digits'], exploration = 't
 	in_bytewidth = np.zeros(n_dataset)
 	model = []
 
-	model_dir = 'model/%s'%(exploration)
+	model_dir = 'trained-models/%s'%(exploration)
 	os.makedirs(model_dir, exist_ok = True) 
 
 	for i in range(0,n_dataset):

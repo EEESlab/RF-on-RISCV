@@ -3,9 +3,8 @@ from joblib import dump, load
 import numpy as np
 import os 
 
-from dataset_utils import dataset_selection
-from data_utils import dump_params, dump_test_data
-from graph_utils import rfNodeCount, modelMaxNodes, modelFeatures
+from utils_dataset import dataset_selection
+from utils_graph import rfNodeCount, modelMaxNodes, modelFeatures
 
 
 
@@ -158,7 +157,142 @@ def determine_model_params(model, dataset, f, __in):
 
 
 
-def dump_DT_Arr_kernel(model, n_classes, dataset, f, __in, file):
+def dump_DT_Arr_kernel_baseline(model, file, n_classes, dataset):
+	kernel_c = file[0]
+	kernel_h = file[1]
+	n = len(dataset)
+
+	# Dump "h" header file
+	print("#ifndef __DT_ARR_BASELINE_H__", 	 file = kernel_h)
+	print("#define __DT_ARR_BASELINE_H__\n\n", 	 file = kernel_h)
+
+	for k in range(0, n):
+		__model = model[k]
+		__dataset = dataset[k]
+		__classes = int(n_classes[k])
+		
+		child_dtype,__,child_bytewidth,thr_dtype,__,thr_bytewidth = determine_model_dtype(__model)
+		__,__,__,__,__,__,f_dtype,f_bytewidth,__,__,__ = dataset_selection(__dataset)
+		treeMem, pointerMem, modelMem = determine_model_memory(__model, f_bytewidth, thr_bytewidth, child_bytewidth)
+		
+		print("#ifdef ",__dataset.upper().replace("-","_"), file = kernel_h)
+		print("\n/* %s Dataset */"%__dataset.upper(), file = kernel_h)
+		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(modelMem), file = kernel_h)
+		
+		for j in range(0,n_estimators):
+			estimator = __model.estimators_[j]
+			n_nodes = estimator.tree_.node_count
+			print("#define NODES_TREE_%d 	(%d)"%(j,n_nodes), file = kernel_h)
+
+		for j in range(0,n_estimators):
+			print("\n/*    TREE %d    */"%j,	file = kernel_h)
+			print("/* L1 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = kernel_h)
+	
+			estimator = __model.estimators_[j]
+			n_nodes = estimator.tree_.node_count
+	
+			print("%s features_tree%d[NODES_TREE_%d];"%(f_dtype,j,j), file = kernel_h);
+			print("%s threshold_tree%d[NODES_TREE_%d];"%(thr_dtype,j,j), file = kernel_h);
+			print("%s children_left_tree%d[NODES_TREE_%d];"%(child_dtype,j,j), file = kernel_h);
+			print("%s children_right_tree%d[NODES_TREE_%d];"%(child_dtype,j,j), file = kernel_h);
+
+		print("\n/* L1 Memory Requirements = %.2fkB */"%(total_byte*n_estimators*0.001),file = kernel_h)
+		print("%s *features[N_TREES];"%f_dtype, file = kernel_h)
+		print("%s *threshold[N_TREES];"%thr_dtype, file = kernel_h)
+		print("%s *children_left[N_TREES];"%child_dtype, file = kernel_h)
+		print("%s *children_right[N_TREES];"%child_dtype, file = kernel_h)
+		print("\n#endif\n\n",file = kernel_h)
+
+	print("#endif \n\n", file = kernel_h)
+
+	# Dump "C" source file
+	print("#include \"pmsis.h\"",  file = kernel_c)
+	print("#include \"params.h\"", file = kernel_c)
+	print("#include \"dt-arr-baseline.h\"\n\n", file = kernel_c)
+
+	for k in range(0,n):
+		__model = model[k]
+		__dataset = dataset[k]
+		__classes = int(n_classes[k])
+		n_estimators = __model.n_estimators
+
+		child_dtype,__,child_bytewidth,thr_dtype,__,thr_bytewidth = determine_model_dtype(__model)
+		__,__,__,__,__,__,f_dtype,f_bytewidth,__,__,__ = dataset_selection(__dataset)
+		treeMem, pointerMem, modelMem = determine_model_memory(__model, f_bytewidth, thr_bytewidth, child_bytewidth)
+		
+		print("#ifdef ",__dataset.upper().replace("-","_"), file = kernel_c)
+		print("\n/* %s Dataset */"%__dataset.upper(), file = kernel_c)
+		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(modelMem), file = kernel_c)
+	
+		for j in range(0,n_estimators):
+			print("/*    TREE %d    */"%j,	file = kernel_c)
+			print("/* L1 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = kernel_c)
+	
+			estimator = __model.estimators_[j]
+			n_nodes = estimator.tree_.node_count
+			children_left = estimator.tree_.children_left
+			children_right = estimator.tree_.children_right
+			feature = estimator.tree_.feature
+			threshold = estimator.tree_.threshold
+			value = np.reshape(estimator.tree_.value,(-1,__classes))
+	
+			classes = []
+			for i in range(0,max(np.shape(value))):
+				classes.append(value[i].argmax())
+	
+			print("PI_CL_L1 %d features_tree%d[NODES_TREE_%d] = { "%(f_dtype,j,j), end = '', file = kernel_c);
+			for i in range(0, n_nodes):
+				print("%d, "%feature[i],  end = '', file = kernel_c)
+			print("};", file = kernel_c)
+	
+			print("PI_CL_L1 %d threshold_tree%d[NODES_TREE_%d] = { "%(thr_dtype,j,j), end = '', file = kernel_c);
+			for i in range(0, n_nodes):
+				print("%f, "%threshold[i],  end = '', file = kernel_c)
+			print("};", file = kernel_c)
+	
+			print("PI_CL_L1 %d children_left_tree%d[NODES_TREE_%d] = { "%(child_dtype,j,j), end = '', file = kernel_c);
+			for i in range(0, n_nodes):
+				if (children_left[i] == -1):
+					print("%d, "%classes[i], end = '',file = kernel_c)
+				else:
+					print("%d, "%children_left[i],  end = '', file = kernel_c)
+			print("};", file = kernel_c)		
+	
+			print("PI_CL_L1 %d children_right_tree%d[NODES_TREE_%d] = { "%(child_dtype,j,j), end = '', file = kernel_c);
+			for i in range(0, n_nodes):
+				if (children_right[i] == -1):
+					print("%d, "%classes[i], end = '',file = kernel_c)
+				else:
+					print("%d, "%children_right[i],  end = '', file = kernel_c)
+			print("};\n", file = kernel_c)	
+	
+		print("/*    Random Forest    */",file = kernel_c)
+		print("/* L1 Memory Requirements = %.2fkB */"%(pointerMem),file = kernel_c)
+		print("\nPI_CL_L1 %s *features[N_TREES] = { "%f_dtype, end = '', file = kernel_c)
+		for j in range(0,n_estimators):
+			print("features_tree%d, "%j, end = '', file = kernel_c)
+		print("};",file = kernel_c)	
+	
+		print("PI_CL_L1 %s *threshold[N_TREES] = { "%thr_dtype end = '', file = kernel_c)
+		for j in range(0,n_estimators):
+			print("threshold_tree%d, "%j, end = '', file = kernel_c)
+		print("};",file = kernel_c)		
+	
+		print("PI_CL_L1 %s *children_left[N_TREES] = { "%child_dtype, end = '', file = kernel_c)
+		for j in range(0,n_estimators):
+			print("children_left_tree%d, "%j, end = '', file = kernel_c)
+		print("};",file = kernel_c)	
+	
+		print("PI_CL_L1 %s *children_right[N_TREES] = { "%child_dtype, end = '', file = kernel_c)
+		for j in range(0,n_estimators):
+			print("children_right_tree%d, "%j, end = '', file = kernel_c)
+		print("};",file = kernel_c)			
+
+		print("\n#endif \n\n", file = kernel_c)
+
+
+
+def dump_DT_Arr_kernel_shiftless(model, n_classes, dataset, f, __in, file):
 	n = len(dataset)
 	f_bytewidth = f[0]
 	f_dtype = f[1]
@@ -191,20 +325,19 @@ def dump_DT_Arr_kernel(model, n_classes, dataset, f, __in, file):
 	child_bytewidth = child[0]  
 	child_dtype = child[1]
 
-	fileC = file[0]
-	fileH = file[1]
+	kernel_c = file[0]
+	kernel_h = file[1]
 
 	# Dump source code
-	print("#include \"pmsis.h\"", file = fileC)
-	print("#include \"params.h\"", file = fileC)
-	print("#include \"dt-arr.h\"\n\n", file = fileC)
+	print("#include \"pmsis.h\"", file = kernel_c)
+	print("#include \"params.h\"", file = kernel_c)
+	print("#include \"dt-arr.h\"\n\n", file = kernel_c)
 	
 	# Dump header code
-	print("#ifndef __DT_ARR_H__", 	 file = fileH)
-	print("#define __DT_ARR_H__\n\n", 	 file = fileH)
+	print("#ifndef __DT_ARR_H__", 	 file = kernel_h)
+	print("#define __DT_ARR_H__\n\n", 	 file = kernel_h)
 
 	for k in range(0,n):
-
 		__model = model[k]
 		__dataset = dataset[k]
 		__classes = int(n_classes[k])
@@ -212,55 +345,54 @@ def dump_DT_Arr_kernel(model, n_classes, dataset, f, __in, file):
 
 		treeMem, pointerMem, modelMem = determine_model_memory(__model, f_bytewidth[k], thr_bytewidth[k], child_bytewidth[k])
 
-		# Dump header code
-		print("#ifdef ",__dataset.upper().replace("-","_"), 			file = fileH)
-		print("\n/* %s Dataset */"%__dataset.upper(), file = fileH)
-		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(modelMem), file = fileH)
+		print("#ifdef ",__dataset.upper().replace("-","_"), 			file = kernel_h)
+		print("\n/* %s Dataset */"%__dataset.upper(), file = kernel_h)
+		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(modelMem), file = kernel_h)
 		
 		for j in range(0,n_estimators):
 			estimator = __model.estimators_[j]
 			n_nodes = estimator.tree_.node_count
-			print("#define NODES_TREE_%d 	(%d)"%(j,n_nodes), file = fileH)
+			print("#define NODES_TREE_%d 	(%d)"%(j,n_nodes), file = kernel_h)
 
-		print("\n#define INPUT_DATATYPE %s"%in_dtype[k],	file = fileH)
-		print("#define FEATURES_DATATYPE %s"%f_dtype[k],	file = fileH)
-		print("#define THRESHOLD_DATATYPE %s"%thr_dtype[k],	file = fileH)
-		print("#define CHILDREN_DATATYPE %s"%child_dtype[k],	file = fileH)
+		print("\n#define INPUT_DATATYPE %s"%in_dtype[k],	file = kernel_h)
+		print("#define FEATURES_DATATYPE %s"%f_dtype[k],	file = kernel_h)
+		print("#define THRESHOLD_DATATYPE %s"%thr_dtype[k],	file = kernel_h)
+		print("#define CHILDREN_DATATYPE %s"%child_dtype[k],	file = kernel_h)
 
-		print("\n#define FEAT2INPUT (%d) /* %s Op */"%(f2in[k],f2in_op[k]),	file = fileH)
-		print("#define CHILD2NODE (%d) /* %s Op */"%(child2node[k],child2node_op[k]),	file = fileH)
-		print("#define THRESH2NODE (%d) /* %s Op */"%(thr2node[k],thr2node_op[k]),	file = fileH)
-		print("#define FEAT2NODE (%d) /* %s Op */"%(f2node[k],f2node_op[k]),	file = fileH)
-		print("#define RIGHT_OFFSET (%d)"%(right_offset[k]),	file = fileH)
-		print("#define OUTPUT_RS (%d)"%(output_rs[k]),	file = fileH)
+		print("\n#define FEAT2INPUT (%d) /* %s Op */"%(f2in[k],f2in_op[k]),	file = kernel_h)
+		print("#define CHILD2NODE (%d) /* %s Op */"%(child2node[k],child2node_op[k]),	file = kernel_h)
+		print("#define THRESH2NODE (%d) /* %s Op */"%(thr2node[k],thr2node_op[k]),	file = kernel_h)
+		print("#define FEAT2NODE (%d) /* %s Op */"%(f2node[k],f2node_op[k]),	file = kernel_h)
+		print("#define RIGHT_OFFSET (%d)"%(right_offset[k]),	file = kernel_h)
+		print("#define OUTPUT_RS (%d)"%(output_rs[k]),	file = kernel_h)
 
 		for j in range(0,n_estimators):
-			print("\n/*    TREE %d    */"%j,	file = fileH)
-			print("/* L1 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = fileH)
+			print("\n/*    TREE %d    */"%j,	file = kernel_h)
+			print("/* L1 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = kernel_h)
 	
 			estimator = __model.estimators_[j]
 			n_nodes = estimator.tree_.node_count
 	
-			print("%s features_tree%d[NODES_TREE_%d];"%(f_dtype[k],j,j), file = fileH);
-			print("%s threshold_tree%d[NODES_TREE_%d];"%(thr_dtype[k],j,j), file = fileH);
-			print("%s children_tree%d[NODES_TREE_%d*2];"%(child_dtype[k],j,j), file = fileH);
+			print("%s features_tree%d[NODES_TREE_%d];"%(f_dtype[k],j,j), file = kernel_h);
+			print("%s threshold_tree%d[NODES_TREE_%d];"%(thr_dtype[k],j,j), file = kernel_h);
+			print("%s children_tree%d[NODES_TREE_%d*2];"%(child_dtype[k],j,j), file = kernel_h);
 
-		print("\n/* L1 Memory Requirements = %.2fkB */"%(pointerMem),file = fileH)
-		print("%s *features[N_TREES];"%(f_dtype[k]), file = fileH)
-		print("%s *threshold[N_TREES];"%(thr_dtype[k]), file = fileH)
-		print("%s *children[N_TREES];"%(child_dtype[k]), file = fileH)
+		print("\n/* L1 Memory Requirements = %.2fkB */"%(pointerMem),file = kernel_h)
+		print("%s *features[N_TREES];"%(f_dtype[k]), file = kernel_h)
+		print("%s *threshold[N_TREES];"%(thr_dtype[k]), file = kernel_h)
+		print("%s *children[N_TREES];"%(child_dtype[k]), file = kernel_h)
 
-		print("\n#endif\n\n",file = fileH)
+		print("\n#endif\n\n",file = kernel_h)
 
 		# Dump source code
-		print("#ifdef ",__dataset.upper().replace("-","_"), file = fileC)
-		print("\n/* %s Dataset */"%__dataset.upper(), file = fileC)
+		print("#ifdef ",__dataset.upper().replace("-","_"), file = kernel_c)
+		print("\n/* %s Dataset */"%__dataset.upper(), file = kernel_c)
 
-		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(modelMem), file = fileC)
+		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(modelMem), file = kernel_c)
 	
 		for j in range(0,n_estimators):
-			print("/*    TREE %d    */"%j,	file = fileC)
-			print("/* L1 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = fileC)
+			print("/*    TREE %d    */"%j,	file = kernel_c)
+			print("/* L1 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = kernel_c)
 	
 			estimator = __model.estimators_[j]
 			n_nodes = estimator.tree_.node_count
@@ -274,46 +406,46 @@ def dump_DT_Arr_kernel(model, n_classes, dataset, f, __in, file):
 			for i in range(0,max(np.shape(value))):
 				classes.append(value[i].argmax())
 	
-			print("PI_CL_L1 %s features_tree%d[NODES_TREE_%d] = { "%(f_dtype[k],j,j), end = '', file = fileC);
+			print("PI_CL_L1 %s features_tree%d[NODES_TREE_%d] = { "%(f_dtype[k],j,j), end = '', file = kernel_c);
 			for i in range(0, n_nodes):
-				print("%d, "%(feature[i] * f_const[k]),  end = '', file = fileC)
-			print("};", file = fileC)
+				print("%d, "%(feature[i] * f_const[k]),  end = '', file = kernel_c)
+			print("};", file = kernel_c)
 	
-			print("PI_CL_L1 %s threshold_tree%d[NODES_TREE_%d] = { "%(thr_dtype[k],j,j), end = '', file = fileC);
+			print("PI_CL_L1 %s threshold_tree%d[NODES_TREE_%d] = { "%(thr_dtype[k],j,j), end = '', file = kernel_c);
 			for i in range(0, n_nodes):
-				print("%f, "%(threshold[i] * thr_const[k]),  end = '', file = fileC)
-			print("};", file = fileC)
+				print("%f, "%(threshold[i] * thr_const[k]),  end = '', file = kernel_c)
+			print("};", file = kernel_c)
 
-			print("PI_CL_L1 %s children_tree%d[NODES_TREE_%d*2] = { "%(child_dtype[k],j,j), end = '', file = fileC);
+			print("PI_CL_L1 %s children_tree%d[NODES_TREE_%d*2] = { "%(child_dtype[k],j,j), end = '', file = kernel_c);
 			for i in range(0, n_nodes):			
 				if (children_left[i] == -1):
-					print("%d, "%(classes[i]), end = '',file = fileC)
+					print("%d, "%(classes[i]), end = '',file = kernel_c)
 				else:
-					print("%d, "%(children_left[i] * child_const[k]),  end = '', file = fileC)
+					print("%d, "%(children_left[i] * child_const[k]),  end = '', file = kernel_c)
 				if (children_right[i] == -1):
-					print("%d, "%(classes[i]), end = '',file = fileC)
+					print("%d, "%(classes[i]), end = '',file = kernel_c)
 				else:
-					print("%d, "%(children_right[i] * child_const[k]),  end = '', file = fileC)
-			print("};\n", file = fileC)
+					print("%d, "%(children_right[i] * child_const[k]),  end = '', file = kernel_c)
+			print("};\n", file = kernel_c)
 	
-		print("/*    Random Forest    */",file = fileC)
-		print("/* L1 Memory Requirements = %.2fkB */"%(pointerMem),file = fileC)
-		print("\nPI_CL_L1 %s *features[N_TREES] = { "%(f_dtype[k]), end = '', file = fileC)
+		print("/*    Random Forest    */",file = kernel_c)
+		print("/* L1 Memory Requirements = %.2fkB */"%(pointerMem),file = kernel_c)
+		print("\nPI_CL_L1 %s *features[N_TREES] = { "%(f_dtype[k]), end = '', file = kernel_c)
 		for j in range(0,n_estimators):
-			print("&features_tree%d[0], "%j, end = '', file = fileC)
-		print("};",file = fileC)	
+			print("&features_tree%d[0], "%j, end = '', file = kernel_c)
+		print("};",file = kernel_c)	
 	
-		print("PI_CL_L1 %s *threshold[N_TREES] = { "%(thr_dtype[k]), end = '', file = fileC)
+		print("PI_CL_L1 %s *threshold[N_TREES] = { "%(thr_dtype[k]), end = '', file = kernel_c)
 		for j in range(0,n_estimators):
-			print("&threshold_tree%d[0], "%j, end = '', file = fileC)
-		print("};",file = fileC)		
+			print("&threshold_tree%d[0], "%j, end = '', file = kernel_c)
+		print("};",file = kernel_c)		
 	
-		print("PI_CL_L1 %s *children[N_TREES] = { "%(child_dtype[k]), end = '', file = fileC)
+		print("PI_CL_L1 %s *children[N_TREES] = { "%(child_dtype[k]), end = '', file = kernel_c)
 		for j in range(0,n_estimators):
-			print("&children_tree%d[0], "%j, end = '', file = fileC)
-		print("};",file = fileC)	
+			print("&children_tree%d[0], "%j, end = '', file = kernel_c)
+		print("};",file = kernel_c)	
 
-		print("\n#endif \n\n", file = fileC)
+		print("\n#endif \n\n", file = kernel_c)
 
 	# Dump header code
-	print("#endif \n\n", file = fileH)
+	print("#endif \n\n", file = kernel_h)

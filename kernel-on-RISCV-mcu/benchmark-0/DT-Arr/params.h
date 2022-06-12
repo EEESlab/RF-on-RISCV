@@ -11,11 +11,11 @@
 //#define STATS
 //#define STATS_FPU
 
-//#define VEHICLE
+#define VEHICLE
 //#define MFEAT_FACTORS
 
 //#define RF2ARR_V0
-//#define RF2ARR_V1
+#define RF2ARR_V1
 //#define RF2ARR_OPT
 
 //#define UNROLL

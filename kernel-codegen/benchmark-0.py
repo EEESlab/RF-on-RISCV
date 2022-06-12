@@ -1,4 +1,4 @@
-from dump_RF import dump_RF
+from RF_dump import dump_RF
 
 dump_RF(exploration = "benchmark-0", kernel = "DT-Naive")
 dump_RF(exploration = "benchmark-0", kernel = "DT-Loop")
