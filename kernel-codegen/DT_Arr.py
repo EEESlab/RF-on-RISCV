@@ -170,6 +170,7 @@ def dump_DT_Arr_kernel_baseline(model, file, n_classes, dataset):
 		__model = model[k]
 		__dataset = dataset[k]
 		__classes = int(n_classes[k])
+		n_estimators = __model.n_estimators
 		
 		child_dtype,__,child_bytewidth,thr_dtype,__,thr_bytewidth = determine_model_dtype(__model)
 		__,__,__,__,__,__,f_dtype,f_bytewidth,__,__,__ = dataset_selection(__dataset)
@@ -196,7 +197,7 @@ def dump_DT_Arr_kernel_baseline(model, file, n_classes, dataset):
 			print("%s children_left_tree%d[NODES_TREE_%d];"%(child_dtype,j,j), file = kernel_h);
 			print("%s children_right_tree%d[NODES_TREE_%d];"%(child_dtype,j,j), file = kernel_h);
 
-		print("\n/* L1 Memory Requirements = %.2fkB */"%(total_byte*n_estimators*0.001),file = kernel_h)
+		print("\n/* L1 Memory Requirements = %.2fkB */"%(treeMem[j]),file = kernel_h)
 		print("%s *features[N_TREES];"%f_dtype, file = kernel_h)
 		print("%s *threshold[N_TREES];"%thr_dtype, file = kernel_h)
 		print("%s *children_left[N_TREES];"%child_dtype, file = kernel_h)
@@ -240,17 +241,17 @@ def dump_DT_Arr_kernel_baseline(model, file, n_classes, dataset):
 			for i in range(0,max(np.shape(value))):
 				classes.append(value[i].argmax())
 	
-			print("PI_CL_L1 %d features_tree%d[NODES_TREE_%d] = { "%(f_dtype,j,j), end = '', file = kernel_c);
+			print("PI_CL_L1 %s features_tree%d[NODES_TREE_%d] = { "%(f_dtype,j,j), end = '', file = kernel_c);
 			for i in range(0, n_nodes):
 				print("%d, "%feature[i],  end = '', file = kernel_c)
 			print("};", file = kernel_c)
 	
-			print("PI_CL_L1 %d threshold_tree%d[NODES_TREE_%d] = { "%(thr_dtype,j,j), end = '', file = kernel_c);
+			print("PI_CL_L1 %s threshold_tree%d[NODES_TREE_%d] = { "%(thr_dtype,j,j), end = '', file = kernel_c);
 			for i in range(0, n_nodes):
 				print("%f, "%threshold[i],  end = '', file = kernel_c)
 			print("};", file = kernel_c)
 	
-			print("PI_CL_L1 %d children_left_tree%d[NODES_TREE_%d] = { "%(child_dtype,j,j), end = '', file = kernel_c);
+			print("PI_CL_L1 %s children_left_tree%d[NODES_TREE_%d] = { "%(child_dtype,j,j), end = '', file = kernel_c);
 			for i in range(0, n_nodes):
 				if (children_left[i] == -1):
 					print("%d, "%classes[i], end = '',file = kernel_c)
@@ -258,7 +259,7 @@ def dump_DT_Arr_kernel_baseline(model, file, n_classes, dataset):
 					print("%d, "%children_left[i],  end = '', file = kernel_c)
 			print("};", file = kernel_c)		
 	
-			print("PI_CL_L1 %d children_right_tree%d[NODES_TREE_%d] = { "%(child_dtype,j,j), end = '', file = kernel_c);
+			print("PI_CL_L1 %s children_right_tree%d[NODES_TREE_%d] = { "%(child_dtype,j,j), end = '', file = kernel_c);
 			for i in range(0, n_nodes):
 				if (children_right[i] == -1):
 					print("%d, "%classes[i], end = '',file = kernel_c)
@@ -273,7 +274,7 @@ def dump_DT_Arr_kernel_baseline(model, file, n_classes, dataset):
 			print("features_tree%d, "%j, end = '', file = kernel_c)
 		print("};",file = kernel_c)	
 	
-		print("PI_CL_L1 %s *threshold[N_TREES] = { "%thr_dtype end = '', file = kernel_c)
+		print("PI_CL_L1 %s *threshold[N_TREES] = { "%thr_dtype, end = '', file = kernel_c)
 		for j in range(0,n_estimators):
 			print("threshold_tree%d, "%j, end = '', file = kernel_c)
 		print("};",file = kernel_c)		

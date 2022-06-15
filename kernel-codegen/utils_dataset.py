@@ -211,6 +211,10 @@ def dataset_selection(dataset, version = 1, train_size = 0.7):
 		x_train, x_test, y_train, y_test = train_test_split(x, y, train_size = train_size, random_state = 12)
 		n_features = x_test.shape[1]
 
+	else:
+
+		raise Exception('Dataset not supported!')
+	
 	__, f_dtype, __, f_bytewidth, in_int, in_dtype, __, in_bytewidth = dataset_spec(np.concatenate((x_train,x_test)))
 	n_classes  = np.unique(y_test).shape[0]
 	y_test  = y_test.ravel()

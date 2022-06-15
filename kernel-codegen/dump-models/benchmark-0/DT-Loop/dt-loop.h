@@ -1,5 +1,5 @@
-#ifndef __RF2LOOP_H__
-#define __RF2LOOP_H__
+#ifndef __DT_LOOP_H__
+#define __DT_LOOP_H__
 
 
 #ifdef  MFEAT_FACTORS

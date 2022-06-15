@@ -8,7 +8,7 @@ from utils_data import dump_params, dump_test_data
 from DT_Naive import dump_DT_Naive_kernel
 from DT_Loop import dump_DT_Loop_kernel
 from DT_Rec import dump_DT_Rec_kernel
-from DT_Arr import dump_DT_Arr_kernel
+from DT_Arr import dump_DT_Arr_kernel_shiftless, dump_DT_Arr_kernel_baseline
 
 
 
@@ -68,5 +68,7 @@ def dump_RF(exploration, kernel):
 		dump_DT_Loop_kernel(model,[kernel_c,kernel_h],n_classes,dataset)
 	if (kernel == 'DT-Rec'):
 		dump_DT_Rec_kernel(model,[kernel_c,kernel_h],n_classes,dataset)
-	if (kernel == 'DT-Arr'):
+	if (kernel == 'DT-Arr-Baseline'):
+		dump_DT_Arr_kernel_baseline(model,[kernel_c,kernel_h],n_classes,dataset)
+	if (kernel == 'DT-Arr-Shiftless'):
 		dump_DT_Arr_kernel_shiftless(model,n_classes,dataset,[f_bytewidth,f_dtype],[in_bytewidth,in_dtype],[kernel_c,kernel_h])
