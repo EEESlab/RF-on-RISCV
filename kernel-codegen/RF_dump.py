@@ -8,11 +8,11 @@ from utils_data import dump_params, dump_test_data
 from DT_Naive import dump_DT_Naive_kernel
 from DT_Loop import dump_DT_Loop_kernel
 from DT_Rec import dump_DT_Rec_kernel
-from DT_Arr import dump_DT_Arr_kernel_shiftless, dump_DT_Arr_kernel_baseline
+from DT_Arr import dump_DT_Arr_Shiftless_L2, dump_DT_Arr_Shiftless_L1, dump_DT_Arr_Baseline_L2, dump_DT_Arr_Baseline_L1
 
 
 
-def dump_RF(exploration, kernel):	
+def dump_RF(exploration, kernel, double_buffering = False):	
 	runtime_dir = 'dump-models/%s/%s'%(exploration,kernel)
 	model_dir   = 'trained-models/%s'%(exploration)
 	n_models 	= len(os.listdir(model_dir))
@@ -69,6 +69,12 @@ def dump_RF(exploration, kernel):
 	if (kernel == 'DT-Rec'):
 		dump_DT_Rec_kernel(model,[kernel_c,kernel_h],n_classes,dataset)
 	if (kernel == 'DT-Arr-Baseline'):
-		dump_DT_Arr_kernel_baseline(model,[kernel_c,kernel_h],n_classes,dataset)
+		if double_buffering == False:
+			dump_DT_Arr_Baseline_L1(model,[kernel_c,kernel_h],n_classes,dataset)
+		else:
+			dump_DT_Arr_Baseline_L2(model,[kernel_c,kernel_h],n_classes,dataset)
 	if (kernel == 'DT-Arr-Shiftless'):
-		dump_DT_Arr_kernel_shiftless(model,n_classes,dataset,[f_bytewidth,f_dtype],[in_bytewidth,in_dtype],[kernel_c,kernel_h])
+		if double_buffering == False:
+			dump_DT_Arr_Shiftless_L1(model,n_classes,dataset,[f_bytewidth,f_dtype],[in_bytewidth,in_dtype],[kernel_c,kernel_h])
+		else:
+			dump_DT_Arr_Shiftless_L2(model,n_classes,dataset,[f_bytewidth,f_dtype],[in_bytewidth,in_dtype],[kernel_c,kernel_h])

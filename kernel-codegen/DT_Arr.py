@@ -157,7 +157,7 @@ def determine_model_params(model, dataset, f, __in):
 
 
 
-def dump_DT_Arr_kernel_baseline(model, file, n_classes, dataset):
+def dump_DT_Arr_Baseline_L1(model, file, n_classes, dataset):
 	kernel_c = file[0]
 	kernel_h = file[1]
 	n = len(dataset)
@@ -173,7 +173,7 @@ def dump_DT_Arr_kernel_baseline(model, file, n_classes, dataset):
 		n_estimators = __model.n_estimators
 		
 		child_dtype,__,child_bytewidth,thr_dtype,__,thr_bytewidth = determine_model_dtype(__model)
-		__,__,__,__,__,__,f_dtype,f_bytewidth,__,__,__ = dataset_selection(__dataset)
+		__,__,__,__,__,__,f_dtype,f_bytewidth,__,in_dtype,__ = dataset_selection(__dataset)
 		treeMem, pointerMem, modelMem = determine_model_memory(__model, f_bytewidth, thr_bytewidth, child_bytewidth)
 		
 		print("#ifdef ",__dataset.upper().replace("-","_"), file = kernel_h)
@@ -184,6 +184,11 @@ def dump_DT_Arr_kernel_baseline(model, file, n_classes, dataset):
 			estimator = __model.estimators_[j]
 			n_nodes = estimator.tree_.node_count
 			print("#define NODES_TREE_%d 	(%d)"%(j,n_nodes), file = kernel_h)
+
+		print("\n#define INPUT_DATATYPE %s"%in_dtype,	file = kernel_h)
+		print("#define FEATURES_DATATYPE %s"%f_dtype,	file = kernel_h)
+		print("#define THRESHOLD_DATATYPE %s"%thr_dtype,	file = kernel_h)
+		print("#define CHILDREN_DATATYPE %s"%child_dtype,	file = kernel_h)
 
 		for j in range(0,n_estimators):
 			print("\n/*    TREE %d    */"%j,	file = kernel_h)
@@ -293,7 +298,143 @@ def dump_DT_Arr_kernel_baseline(model, file, n_classes, dataset):
 
 
 
-def dump_DT_Arr_kernel_shiftless(model, n_classes, dataset, f, __in, file):
+def dump_DT_Arr_Baseline_L2(model, file, n_classes, dataset):
+	kernel_c = file[0]
+	kernel_h = file[1]
+	n = len(dataset)
+
+	# Dump "h" header file
+	print("#ifndef __DT_ARR_BASELINE_H__", 	 file = kernel_h)
+	print("#define __DT_ARR_BASELINE_H__\n\n", 	 file = kernel_h)
+
+	for k in range(0, n):
+		__model = model[k]
+		__dataset = dataset[k]
+		__classes = int(n_classes[k])
+		n_estimators = __model.n_estimators
+		
+		child_dtype,__,child_bytewidth,thr_dtype,__,thr_bytewidth = determine_model_dtype(__model)
+		__,__,__,__,__,__,f_dtype,f_bytewidth,__,in_dtype,__ = dataset_selection(__dataset)
+		treeMem, pointerMem, modelMem = determine_model_memory(__model, f_bytewidth, thr_bytewidth, child_bytewidth)
+		
+		print("#ifdef ",__dataset.upper().replace("-","_"), file = kernel_h)
+		print("\n/* %s Dataset */"%__dataset.upper(), file = kernel_h)
+		print("/* Total L2 Memory Requirements = %.2fkB */\n"%(modelMem), file = kernel_h)
+		
+		for j in range(0,n_estimators):
+			estimator = __model.estimators_[j]
+			n_nodes = estimator.tree_.node_count
+			print("#define NODES_TREE_%d 	(%d)"%(j,n_nodes), file = kernel_h)
+
+		print("\n#define INPUT_DATATYPE %s"%in_dtype,	file = kernel_h)
+		print("#define FEATURES_DATATYPE %s"%f_dtype,	file = kernel_h)
+		print("#define THRESHOLD_DATATYPE %s"%thr_dtype,	file = kernel_h)
+		print("#define CHILDREN_DATATYPE %s"%child_dtype,	file = kernel_h)
+		print("\n/* Packed struct necessary to avoid padding between struct entries */", file = kernel_h)
+		print("struct __attribute__ ((__packed__)) RandomForest {", file = kernel_h)
+	
+		for j in range(0,n_estimators):
+			print("\n	/*    TREE %d    */"%j,	file = kernel_h)
+			print("	/* L2 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = kernel_h)
+	
+			estimator = __model.estimators_[j]
+			n_nodes = estimator.tree_.node_count
+	
+			print("	%s features_tree%d[NODES_TREE_%d];"%(f_dtype,j,j), file = kernel_h);
+			print("	%s threshold_tree%d[NODES_TREE_%d];"%(thr_dtype,j,j), file = kernel_h);
+			print("	%s children_left_tree%d[NODES_TREE_%d];"%(child_dtype,j,j), file = kernel_h);
+			print("	%s children_right_tree%d[NODES_TREE_%d];"%(child_dtype,j,j), file = kernel_h);
+
+		print("\n} randomforest;\n\n",file = kernel_h)	
+		print("/* L1 Memory Requirements = %.2fkB */\n"%(4*n_estimators*0.004), file = kernel_h)
+		print("uint32_t treeDim[N_TREES];", file = kernel_h)
+		print("uint32_t paramAddr[N_TREES*3];", file = kernel_h)
+		print("\n\n#endif\n\n",file = kernel_h)
+
+	print("#endif \n\n", file = kernel_h)
+
+	# Dump "C" source file
+	print("#include \"pmsis.h\"",  file = kernel_c)
+	print("#include \"params.h\"", file = kernel_c)
+	print("#include \"dt-arr-baseline.h\"\n\n", file = kernel_c)
+
+	for k in range(0,n):
+		__model = model[k]
+		__dataset = dataset[k]
+		__classes = int(n_classes[k])
+		n_estimators = __model.n_estimators
+
+		child_dtype,__,child_bytewidth,thr_dtype,__,thr_bytewidth = determine_model_dtype(__model)
+		__,__,__,__,__,__,f_dtype,f_bytewidth,__,__,__ = dataset_selection(__dataset)
+		treeMem, pointerMem, modelMem = determine_model_memory(__model, f_bytewidth, thr_bytewidth, child_bytewidth)
+		
+		print("#ifdef ",__dataset.upper().replace("-","_"), file = kernel_c)
+		print("\n/* %s Dataset */"%__dataset.upper(), file = kernel_c)
+		print("/* Total L2 Memory Requirements = %.2fkB */\n"%(modelMem), file = kernel_c)
+		print("PI_L2 struct RandomForest randomforest = {\n", file = kernel_c)
+		
+		for j in range(0,n_estimators):
+			print("	/*    TREE %d    */"%j,	file = kernel_c)
+			print("	/* L2 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = kernel_c)
+	
+			estimator = __model.estimators_[j]
+			n_nodes = estimator.tree_.node_count
+			children_left = estimator.tree_.children_left
+			children_right = estimator.tree_.children_right
+			feature = estimator.tree_.feature
+			threshold = estimator.tree_.threshold
+			value = np.reshape(estimator.tree_.value,(-1,__classes))
+	
+			classes = []
+			for i in range(0,max(np.shape(value))):
+				classes.append(value[i].argmax())
+	
+			print("	{ ", end = '', file = kernel_c);
+			for i in range(0, n_nodes):
+				print("%d, "%feature[i],  end = '', file = kernel_c)
+			print("},", file = kernel_c)
+	
+			print("	{ ", end = '', file = kernel_c);
+			for i in range(0, n_nodes):
+				print("%f, "%threshold[i],  end = '', file = kernel_c)
+			print("},", file = kernel_c)
+	
+			print("	{ ", end = '', file = kernel_c);
+			for i in range(0, n_nodes):
+				if (children_left[i] == -1):
+					print("%d, "%classes[i], end = '',file = kernel_c)
+				else:
+					print("%d, "%children_left[i],  end = '', file = kernel_c)
+			print("},", file = kernel_c)		
+	
+			print("	{ ", end = '', file = kernel_c);
+			for i in range(0, n_nodes):
+				if (children_right[i] == -1):
+					print("%d, "%classes[i], end = '',file = kernel_c)
+				else:
+					print("%d, "%children_right[i],  end = '', file = kernel_c)
+			print("},\n", file = kernel_c)	
+
+		print("};\n\n",file = kernel_c)
+
+		print("/* L1 Memory Requirements = %.2fkB */\n"%(4*n_estimators*0.004), file = kernel_c)
+		print("PI_CL_L1 uint32_t treeDim[N_TREES] = {\n", file = kernel_c)
+		for j in range(0,n_estimators):
+			if (j % 8 == 0 and j != 0):
+				print("",file = kernel_c)
+			print("	NODES_TREE_%d, "%j, end = '', file = kernel_c)
+		print("\n\n};\n\n",file = kernel_c)	
+
+		print("PI_CL_L1 uint32_t paramAddr[N_TREES*3] = {\n", file = kernel_c)
+		for j in range(0,n_estimators):
+			print("	(uint32_t) &randomforest.features_tree%d[0], (uint32_t) &randomforest.threshold_tree%d[0], (uint32_t) &randomforest.children_tree%d[0],"%(j,j,j), file = kernel_c)
+		print("};\n\n",file = kernel_c)	
+
+		print("#endif \n\n", file = kernel_c)	
+
+
+
+def dump_DT_Arr_Shiftless_L1(model, n_classes, dataset, f, __in, file):
 	n = len(dataset)
 	f_bytewidth = f[0]
 	f_dtype = f[1]
@@ -450,3 +591,164 @@ def dump_DT_Arr_kernel_shiftless(model, n_classes, dataset, f, __in, file):
 
 	# Dump header code
 	print("#endif \n\n", file = kernel_h)
+
+
+
+def dump_DT_Arr_Shiftless_L2(model, n_classes, dataset, f, __in, file):
+	n = len(dataset)
+	f_bytewidth = f[0]
+	f_dtype = f[1]
+	in_bytewidth = __in[0]
+	in_dtype = __in[1]
+	
+	f_params, thr_params, child_params, oths_params, __in, f, thr, child = \
+		determine_model_params(model = model, dataset = dataset,f =f, __in = __in)
+
+	f_const = f_params[0]
+	f2in = f_params[1]
+	f2in_op = f_params[2]
+	f2node = f_params[3]
+	f2node_op = f_params[4]
+	thr_const = thr_params[0]
+	thr2node = thr_params[1]
+	thr2node_op = thr_params[2]
+	child_const = child_params[0]
+	child2node = child_params[1]
+	child2node_op = child_params[2]
+
+	right_offset = oths_params[0]
+	output_rs = oths_params[1]
+	in_bytewidth = __in[0]
+	in_dtype = __in[1]
+	f_bytewidth = f[0] 
+	f_dtype = f[1] 
+	thr_bytewidth = thr[0]  
+	thr_dtype = thr[1] 
+	child_bytewidth = child[0]  
+	child_dtype = child[1]
+
+	kernel_c = file[0]
+	kernel_h = file[1]
+
+	# Dump source code
+	print("#include \"pmsis.h\"", file = kernel_c)
+	print("#include \"params.h\"", file = kernel_c)
+	print("#include \"dt-arr.h\"\n\n", file = kernel_c)
+	
+	# Dump header code
+	print("#ifndef __DT_ARR_H__", 	 file = kernel_h)
+	print("#define __DT_ARR_H__\n\n", 	 file = kernel_h)
+
+	for k in range(0,n):
+		__model = model[k]
+		__dataset = dataset[k]
+		__classes = int(n_classes[k])
+		n_estimators = __model.n_estimators
+
+		treeMem, pointerMem, modelMem = determine_model_memory(__model, f_bytewidth[k], thr_bytewidth[k], child_bytewidth[k])
+
+		print("#ifdef ",__dataset.upper().replace("-","_"), 			file = kernel_h)
+		print("\n/* %s Dataset */"%__dataset.upper(), file = kernel_h)
+		print("/* Total L2 Memory Requirements = %.2fkB */\n"%(modelMem), file = kernel_h)
+		
+		for j in range(0,n_estimators):
+			estimator = __model.estimators_[j]
+			n_nodes = estimator.tree_.node_count
+			print("#define NODES_TREE_%d 	(%d)"%(j,n_nodes), file = kernel_h)
+
+		print("\n#define INPUT_DATATYPE %s"%in_dtype[k],	file = kernel_h)
+		print("#define FEATURES_DATATYPE %s"%f_dtype[k],	file = kernel_h)
+		print("#define THRESHOLD_DATATYPE %s"%thr_dtype[k],	file = kernel_h)
+		print("#define CHILDREN_DATATYPE %s"%child_dtype[k],	file = kernel_h)
+
+		print("\n#define FEAT2INPUT (%d) /* %s Op */"%(f2in[k],f2in_op[k]),	file = kernel_h)
+		print("#define CHILD2NODE (%d) /* %s Op */"%(child2node[k],child2node_op[k]),	file = kernel_h)
+		print("#define THRESH2NODE (%d) /* %s Op */"%(thr2node[k],thr2node_op[k]),	file = kernel_h)
+		print("#define FEAT2NODE (%d) /* %s Op */"%(f2node[k],f2node_op[k]),	file = kernel_h)
+		print("#define RIGHT_OFFSET (%d)"%(right_offset[k]),	file = kernel_h)
+		print("#define OUTPUT_RS (%d)"%(output_rs[k]),	file = kernel_h)
+
+		print("\n/* Packed struct necessary to avoid padding between struct entries */", file = kernel_h)
+		print("struct __attribute__ ((__packed__)) RandomForest {", file = kernel_h)
+	
+		for j in range(0,n_estimators):
+			print("\n	/*    TREE %d    */"%j,	file = kernel_h)
+			print("	/* L2 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = kernel_h)
+	
+			estimator = __model.estimators_[j]
+			n_nodes = estimator.tree_.node_count
+	
+			print("	%s features_tree%d[NODES_TREE_%d];"%(f_dtype[k],j,j), file = kernel_h);
+			print("	%s threshold_tree%d[NODES_TREE_%d];"%(thr_dtype[k],j,j), file = kernel_h);
+			print("	%s children_tree%d[NODES_TREE_%d*2];"%(child_dtype[k],j,j), file = kernel_h);
+
+		print("\n} randomforest;\n\n",file = kernel_h)	
+		print("/* L1 Memory Requirements = %.2fkB */\n"%(4*n_estimators*0.004), file = kernel_h)
+		print("uint32_t treeDim[N_TREES];", file = kernel_h)
+		print("uint32_t paramAddr[N_TREES*3];", file = kernel_h)
+		print("\n\n#endif\n\n",file = kernel_h)
+
+		# Dump source code
+		print("#ifdef ",__dataset.upper().replace("-","_"), file = kernel_c)
+		print("\n/* %s Dataset */"%__dataset.upper(), file = kernel_c)
+		print("/* Total L2 Memory Requirements = %.2fkB */\n"%(modelMem), file = kernel_c)
+		print("PI_L2 struct RandomForest randomforest = {\n", file = kernel_c)
+			
+		for j in range(0,n_estimators):
+			print("	/*    TREE %d    */"%j,	file = kernel_c)
+			print("	/* L2 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = kernel_c)
+	
+			estimator = __model.estimators_[j]
+			n_nodes = estimator.tree_.node_count
+			children_left = estimator.tree_.children_left
+			children_right = estimator.tree_.children_right
+			feature = estimator.tree_.feature
+			threshold = estimator.tree_.threshold
+			value = np.reshape(estimator.tree_.value,(-1,__classes))
+
+			classes = []
+			for i in range(0,max(np.shape(value))):
+				classes.append(value[i].argmax())
+	
+			print("	{ ", end = '', file = kernel_c);
+			for i in range(0, n_nodes):
+				print("%d, "%(feature[i] * f_const[k]),  end = '', file = kernel_c)
+			print("},", file = kernel_c)
+	
+			print("	{ ", end = '', file = kernel_c);
+			for i in range(0, n_nodes):
+				print("%f, "%(threshold[i] * thr_const[k]),  end = '', file = kernel_c)
+			print("},", file = kernel_c)
+
+			print("	{ ", end = '', file = kernel_c);
+			for i in range(0, n_nodes):			
+				if (children_left[i] == -1):
+					print("%d, "%(classes[i]), end = '',file = kernel_c)
+				else:
+					print("%d, "%(children_left[i] * child_const[k]),  end = '', file = kernel_c)
+				if (children_right[i] == -1):
+					print("%d, "%(classes[i]), end = '',file = kernel_c)
+				else:
+					print("%d, "%(children_right[i] * child_const[k]),  end = '', file = kernel_c)
+			print("},\n", file = kernel_c)
+
+		print("};\n\n",file = kernel_c)
+
+		print("/* L1 Memory Requirements = %.2fkB */\n"%(4*n_estimators*0.004), file = kernel_c)
+		print("PI_CL_L1 uint32_t treeDim[N_TREES] = {\n", file = kernel_c)
+		for j in range(0,n_estimators):
+			if (j % 8 == 0 and j != 0):
+				print("",file = kernel_c)
+			print("	NODES_TREE_%d, "%j, end = '', file = kernel_c)
+		print("\n\n};\n\n",file = kernel_c)	
+
+		print("PI_CL_L1 uint32_t paramAddr[N_TREES*3] = {\n", file = kernel_c)
+		for j in range(0,n_estimators):
+			print("	(uint32_t) &randomforest.features_tree%d[0], (uint32_t) &randomforest.threshold_tree%d[0], (uint32_t) &randomforest.children_tree%d[0],"%(j,j,j), file = kernel_c)
+		print("};\n\n",file = kernel_c)	
+
+		print("#endif \n\n", file = kernel_c)	
+
+	# Dump header code
+	print("#endif \n\n", file = kernel_h)
+

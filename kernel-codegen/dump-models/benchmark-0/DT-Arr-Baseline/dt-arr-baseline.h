@@ -24,6 +24,11 @@
 #define NODES_TREE_14 	(241)
 #define NODES_TREE_15 	(239)
 
+#define INPUT_DATATYPE uint16_t
+#define FEATURES_DATATYPE int16_t
+#define THRESHOLD_DATATYPE float
+#define CHILDREN_DATATYPE uint8_t
+
 /*    TREE 0    */
 /* L1 Memory Requirements = 1.83kB */
 
@@ -182,6 +187,11 @@ uint8_t *children_right[N_TREES];
 #define NODES_TREE_13 	(247)
 #define NODES_TREE_14 	(195)
 #define NODES_TREE_15 	(217)
+
+#define INPUT_DATATYPE uint16_t
+#define FEATURES_DATATYPE int8_t
+#define THRESHOLD_DATATYPE float
+#define CHILDREN_DATATYPE uint8_t
 
 /*    TREE 0    */
 /* L1 Memory Requirements = 1.36kB */
