@@ -1,6 +1,6 @@
 #include "pmsis.h"
 #include "params.h"
-#include "dt-arr-shiftless.h"
+#include "dt-arr-stallfree.h"
 
 
 #ifdef  MFEAT_FACTORS

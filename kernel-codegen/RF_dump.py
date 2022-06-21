@@ -8,9 +8,10 @@ from utils_data import dump_params, dump_test_data
 from DT_Naive import dump_DT_Naive_kernel
 from DT_Loop import dump_DT_Loop_kernel
 from DT_Rec import dump_DT_Rec_kernel
-from DT_Arr import dump_DT_Arr_Shiftless_L2, dump_DT_Arr_Shiftless_L1, dump_DT_Arr_Baseline_L2, dump_DT_Arr_Baseline_L1
+from DT_Arr import dump_DT_Arr_Stallfree_L1, dump_DT_Arr_Stallfree_L2, dump_DT_Arr_Shiftless_L2, dump_DT_Arr_Shiftless_L1, dump_DT_Arr_Baseline_L2, dump_DT_Arr_Baseline_L1
 
 
+from utils_graph import DT_votes, DT_decision_path
 
 def dump_RF(exploration, kernel, double_buffering = False):	
 	runtime_dir = 'dump-models/%s/%s'%(exploration,kernel)
@@ -18,7 +19,7 @@ def dump_RF(exploration, kernel, double_buffering = False):
 	n_models 	= len(os.listdir(model_dir))
 
 	os.makedirs(runtime_dir, exist_ok = True)
-	kernel_c = open(str(runtime_dir) + "/%s.c"%kernel.lower(),"w")
+	kernel_c = open(str(runtime_dir) + "/%s.c"%kernel.lower	(),"w")
 	kernel_h = open(str(runtime_dir) + "/%s.h"%kernel.lower(),"w")
 	data_c 	 = open(str(runtime_dir) + "/data.c","w")
 	data_h 	 = open(str(runtime_dir) + "/data.h","w")
@@ -78,3 +79,8 @@ def dump_RF(exploration, kernel, double_buffering = False):
 			dump_DT_Arr_Shiftless_L1(model,n_classes,dataset,[f_bytewidth,f_dtype],[in_bytewidth,in_dtype],[kernel_c,kernel_h])
 		else:
 			dump_DT_Arr_Shiftless_L2(model,n_classes,dataset,[f_bytewidth,f_dtype],[in_bytewidth,in_dtype],[kernel_c,kernel_h])
+	if (kernel == 'DT-Arr-Stallfree'):
+		if double_buffering == False:
+			dump_DT_Arr_Stallfree_L1(model,n_classes,dataset,[f_bytewidth,f_dtype],[in_bytewidth,in_dtype],[kernel_c,kernel_h])
+		else:
+			dump_DT_Arr_Stallfree_L2(model,n_classes,dataset,[f_bytewidth,f_dtype],[in_bytewidth,in_dtype],[kernel_c,kernel_h])

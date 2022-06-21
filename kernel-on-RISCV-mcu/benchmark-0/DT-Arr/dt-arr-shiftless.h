@@ -1,5 +1,5 @@
-#ifndef __DT_ARR_SHIFTLESS_H__
-#define __DT_ARR_SHIFTLESS_H__
+#ifndef __DT_ARR_H__
+#define __DT_ARR_H__
 
 
 #ifdef  MFEAT_FACTORS

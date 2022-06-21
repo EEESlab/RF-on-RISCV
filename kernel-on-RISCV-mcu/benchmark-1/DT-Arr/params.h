@@ -14,6 +14,8 @@
 
 //#define VEHICLE
 
+//#define STALLFREE
+
 
 #ifdef  VEHICLE
 

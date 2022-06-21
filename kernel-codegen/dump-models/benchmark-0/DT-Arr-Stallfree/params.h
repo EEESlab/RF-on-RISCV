@@ -15,9 +15,6 @@
 //#define MFEAT_FACTORS
 //#define VEHICLE
 
-//#define BASELINE
-//#define SHIFTLESS
-//#define STALLFREE
 
 #ifdef  MFEAT_FACTORS
 

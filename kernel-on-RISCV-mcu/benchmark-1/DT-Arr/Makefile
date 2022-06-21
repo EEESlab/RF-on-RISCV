@@ -2,13 +2,13 @@
 #------------------------------------
 APP              = test
 # App sources
-APP_SRCS         = dt-arr-baseline.c main.c data.c dt-arr-utils.c
+APP_SRCS         = dt-arr-stallfree.c main.c data.c dt-arr-utils.c
 # App includes
 APP_INC	         =
 # Compiler flags
 APP_CFLAGS       = -O3
 # Linker flags
-APP_LDFLAGS      = #
+APP_LDFLAGS      =
 
 # Custom linker
 APP_LINK_SCRIPT  = 

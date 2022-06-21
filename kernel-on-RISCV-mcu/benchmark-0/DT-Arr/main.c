@@ -5,17 +5,21 @@
 #include "pmsis.h"
 #include "params.h"
 #include "data.h"
-#include "dt-arr.h"
+
+#if defined(BASELINE)
+#include "dt-arr-baseline.h"
+#elif defined(SHIFTLESS)
+#include "dt-arr-shiftless.h"
+#elif defined(STALLFREE)
+#include "dt-arr-stallfree.h"
+#endif
+
 #include "dt-arr-utils.h"
 #include "debug.h"
 #include "stats.h"
 #include "stats_fpu.h"
 
 PI_CL_L1 int class_idx = 0;
-
-#ifdef MFEAT_FACTORS
-PI_CL_L1 int score[N_CLASS] = {0};
-#endif
 
 INIT_DEBUG();
 INIT_STATS();
@@ -28,11 +32,13 @@ void cluster_rf(void *arg)
     ENTER_LOOP_FPU();
     START_STATS_FPU();
 
-    #if defined VEHICLE
-    rf_arr_vehicle((float *) arg, features, threshold, children, &class_idx);
-    #elif defined MFEAT_FACTORS
-    rf_arr_mfeat_factors((float *) arg, features, threshold, children, &class_idx, score);
-    #endif
+    #if defined(BASELINE)
+    rf_arr(arg, features, threshold, children_left, children_right, &class_idx);
+    #elif defined(SHIFTLESS)
+    rf_arr(arg, features, threshold, children, 0, &class_idx);
+    #elif defined(STALLFREE)
+    rf_arr(arg, features, threshold, children, 0, &class_idx);
+    #endif   
 
     STOP_STATS_FPU();
     EXIT_LOOP_FPU();
@@ -44,28 +50,13 @@ void cluster_delegate(void *arg)
 {
     printf("Cluster master core entry\n");
 
-    #ifdef RF2ARR_V0
-    int nodes[N_TREES] = {NODES_TREE_0 ,NODES_TREE_1 ,NODES_TREE_2 ,NODES_TREE_3 ,NODES_TREE_4 ,NODES_TREE_5 ,NODES_TREE_6 ,NODES_TREE_7 ,NODES_TREE_8 ,NODES_TREE_9 ,NODES_TREE_10 ,NODES_TREE_11 ,NODES_TREE_12 ,NODES_TREE_13 ,NODES_TREE_14 ,NODES_TREE_15};    
-    for (int i = 0; i < N_TREES; ++i)
-    {
-        for (int j = 0; j < nodes[i]; ++j)
-        {
-            #ifdef VEHICLE
-            if (*(features[i] + j) != (WHILE_CONDITION)) *(features[i] + j) = *(features[i] + j) / 4;
-            #endif
-            *(children[i] + 2*j    ) = *(children[i] + 2*j    ) / 4;
-            *(children[i] + 2*j + 1) = *(children[i] + 2*j + 1) / 4;
-        }
-    }
-    #endif
-
     ENTER_LOOP_STATS();
     START_STATS();
     
     for (int i = 0; i < N_LOOP; i++)
     {
         /* Task dispatch to cluster cores. */
-        pi_cl_team_fork(N_CORES, cluster_rf, ((float *) (x_test + i*DIM)));
+        pi_cl_team_fork(N_CORES, cluster_rf, ((INPUT_DATATYPE *) (x_test + i*DIM)));
         START_DEBUG();
     }
 

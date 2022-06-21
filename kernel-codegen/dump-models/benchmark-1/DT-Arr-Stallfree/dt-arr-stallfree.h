@@ -1,5 +1,5 @@
-#ifndef __DT_ARR_H__
-#define __DT_ARR_H__
+#ifndef __DT_ARR_STALLFREE_H__
+#define __DT_ARR_STALLFREE_H__
 
 
 #ifdef  VEHICLE
@@ -60,13 +60,11 @@
 #define FEATURES_DATATYPE int8_t
 #define THRESHOLD_DATATYPE float
 #define CHILDREN_DATATYPE uint16_t
-
-#define FEAT2INPUT (1) /* mul Op */
-#define CHILD2NODE (1) /* mul Op */
-#define THRESH2NODE (1) /* mul Op */
-#define FEAT2NODE (4) /* div Op */
-#define RIGHT_OFFSET (2)
-#define OUTPUT_RS (16)
+#define CHILDREN_BYTES (2)
+#define CHILDREN_BITS (16)
+#define BIGNODE_DATATYPE uint32_t
+#define NODE2FEAT_DTYPE (2) /* div shift */
+#define WHILE_CONDITION (-4)
 
 /* Packed struct necessary to avoid padding between struct entries */
 struct __attribute__ ((__packed__)) RandomForest {

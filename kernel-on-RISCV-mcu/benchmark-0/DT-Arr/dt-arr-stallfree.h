@@ -1,5 +1,5 @@
-#ifndef __DT_ARR_SHIFTLESS_H__
-#define __DT_ARR_SHIFTLESS_H__
+#ifndef __DT_ARR_STALLFREE_H__
+#define __DT_ARR_STALLFREE_H__
 
 
 #ifdef  MFEAT_FACTORS
@@ -28,9 +28,11 @@
 #define FEATURES_DATATYPE int16_t
 #define THRESHOLD_DATATYPE float
 #define CHILDREN_DATATYPE uint16_t
-#define WHILE_CONDITION (-4)
 #define CHILDREN_BYTES (2)
+#define CMP_SHIFT (4)
+#define BIGNODE_DATATYPE uint32_t
 #define NODE2FEAT_DTYPE (1) /* div shift */
+#define WHILE_CONDITION (-4)
 
 /*    TREE 0    */
 /* L1 Memory Requirements = 2.29kB */
@@ -178,9 +180,11 @@ uint16_t *children[N_TREES];
 #define FEATURES_DATATYPE int8_t
 #define THRESHOLD_DATATYPE float
 #define CHILDREN_DATATYPE uint16_t
-#define WHILE_CONDITION (-4)
 #define CHILDREN_BYTES (2)
+#define CMP_SHIFT (4)
+#define BIGNODE_DATATYPE uint32_t
 #define NODE2FEAT_DTYPE (2) /* div shift */
+#define WHILE_CONDITION (-4)
 
 /*    TREE 0    */
 /* L1 Memory Requirements = 1.76kB */
