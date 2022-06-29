@@ -15,10 +15,10 @@ PI_CL_L1 int class_idx = 0;
 
 #ifdef MFEAT_FACTORS
 
-PI_CL_L1 float *dmaTestBuffer1 = NULL;
-PI_CL_L1 float *dmaTestBuffer2 = NULL;
-PI_CL_L1 float *testBuffer = NULL;
-PI_CL_L1 float *testBufferArr[2] = {NULL};
+PI_CL_L1 INPUT_DATATYPE *dmaTestBuffer1 = NULL;
+PI_CL_L1 INPUT_DATATYPE *dmaTestBuffer2 = NULL;
+PI_CL_L1 INPUT_DATATYPE *testBuffer = NULL;
+PI_CL_L1 INPUT_DATATYPE *testBufferArr[2] = {NULL};
 
 #endif
 
@@ -35,7 +35,7 @@ void cluster_rf(void *arg)
 
     uint32_t core_id = pi_core_id();
 
-    rf2loop_prediction((float *) arg, randomForest, &class_idx, N_TREES, N_CLASS);
+    rf2loop_prediction(arg, randomForest, &class_idx, N_TREES, N_CLASS);
 
     STOP_STATS_FPU();
     EXIT_LOOP_FPU();
@@ -56,7 +56,7 @@ void cluster_delegate(void *arg)
     pi_cl_dma_cmd_t *DmaR_EvtInput[2]   = {&DmaR_Evt1, &DmaR_Evt2};
 
     /* Transfer 1st test Input */
-    pi_cl_dma_cmd((uint32_t) (x_test), (uint32_t) testBufferArr[input_idx], DIM*4,  PI_CL_DMA_DIR_EXT2LOC, DmaR_EvtInput[input_idx]);
+    pi_cl_dma_cmd((uint32_t) (x_test), (uint32_t) testBufferArr[input_idx], DIM*INPUT_BYTES,  PI_CL_DMA_DIR_EXT2LOC, DmaR_EvtInput[input_idx]);
     pi_cl_dma_cmd_wait(DmaR_EvtInput[input_idx]);
     
     ENTER_LOOP_STATS();
@@ -65,10 +65,10 @@ void cluster_delegate(void *arg)
     for (int i = 1; i < N_LOOP; i++)
     {
         /* Transfer ith test Input */
-        pi_cl_dma_cmd((uint32_t) (x_test + i*DIM), (uint32_t) testBufferArr[!input_idx], DIM*4,  PI_CL_DMA_DIR_EXT2LOC, DmaR_EvtInput[!input_idx]);
+        pi_cl_dma_cmd((uint32_t) (x_test + i*DIM), (uint32_t) testBufferArr[!input_idx], DIM*INPUT_BYTES,  PI_CL_DMA_DIR_EXT2LOC, DmaR_EvtInput[!input_idx]);
         
         testBuffer = testBufferArr[input_idx];
-        pi_cl_team_fork(N_CORES, cluster_rf, ((float *) testBuffer));
+        pi_cl_team_fork(N_CORES, cluster_rf, ((INPUT_DATATYPE *) testBuffer));
         START_DEBUG_1();
 
         pi_cl_dma_cmd_wait(DmaR_EvtInput[!input_idx]);
@@ -76,7 +76,7 @@ void cluster_delegate(void *arg)
     }
 
     testBuffer = testBufferArr[input_idx];
-    pi_cl_team_fork(N_CORES, cluster_rf, ((float *) testBuffer));
+    pi_cl_team_fork(N_CORES, cluster_rf, ((INPUT_DATATYPE *) testBuffer));
 
     START_DEBUG_2();
 
@@ -88,7 +88,7 @@ void cluster_delegate(void *arg)
    for (int i = 0; i < N_LOOP; i++)
    {
        /* Task dispatch to cluster cores. */
-       pi_cl_team_fork(N_CORES, cluster_rf, ((float *) x_test) + i*DIM);
+       pi_cl_team_fork(N_CORES, cluster_rf, ((INPUT_DATATYPE *) x_test) + i*DIM);
        START_DEBUG();
    }
 
@@ -131,8 +131,8 @@ void fabric_controller(void)
     #ifdef MFEAT_FACTORS
 
     /* Allocating DMA Double-Buffering buffers in L1 */
-    dmaTestBuffer1 = (float *) pi_cl_l1_malloc(&cluster_dev, (uint32_t) (4*DIM));
-    dmaTestBuffer2 = (float *) pi_cl_l1_malloc(&cluster_dev, (uint32_t) (4*DIM));
+    dmaTestBuffer1 = (INPUT_DATATYPE *) pi_cl_l1_malloc(&cluster_dev, (uint32_t) (INPUT_BYTES*DIM));
+    dmaTestBuffer2 = (INPUT_DATATYPE *) pi_cl_l1_malloc(&cluster_dev, (uint32_t) (INPUT_BYTES*DIM));
 
     testBufferArr[0] = dmaTestBuffer1;
     testBufferArr[1] = dmaTestBuffer2;

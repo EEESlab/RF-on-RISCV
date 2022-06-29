@@ -12,7 +12,7 @@ from utils_dataset import dataset_selection
 # Print DT structure in C code
 def dt2code_body(tree, file):
 	tree_ = tree.tree_
-	feature_name = ['features[%d]'%i for i in tree_.feature]
+	feature_name = ['input[%d]'%i for i in tree_.feature]
 
 	def recurse(node, depth, file):
 		indent = "    " * depth
@@ -54,13 +54,14 @@ def dump_DT_Naive_kernel(models, file, n_classes, dataset):
 		rf_model = models[k]
 		dataset_tmp = dataset[k]
 		classes_tmp = int(n_classes[k])
+		__,__,__,__,__,__,f_dtype,__,__,in_dtype,__ = dataset_selection(dataset_tmp)
 
 		print("#ifdef ",dataset_tmp.upper().replace("-","_"), 			file = file_c)
 		print("\n/* %s Dataset */"%dataset_tmp.upper(), 	file = file_c)
 		
 		n_estimators = rf_model.n_estimators
 
-		print("\nvoid randomForest(float *features, int *class_rf_idx)", file = file_c)
+		print("\nvoid randomForest(%s *input, int *class_rf_idx)"%(in_dtype), file = file_c)
 		print("{\n", 										file = file_c)
 		print("    *class_rf_idx = 0;", 					file = file_c)
 		print("    int class_tree_idx = 0;", 				file = file_c)
@@ -109,9 +110,16 @@ def dump_DT_Naive_kernel(models, file, n_classes, dataset):
 	for k in range(0, n_dataset):
 
 		dataset_tmp = dataset[k]
-		print("/* %s Dataset */"%dataset_tmp.upper(), 							file = file_h)
+		__,__,__,__,__,__,f_dtype,__,__,in_dtype,__ = dataset_selection(dataset_tmp)
 
-	print("", 														file = file_h)
-	print("void randomForest(float *features, int *class_rf_idx);", file = file_h)
-	print("", 														file = file_h)
+		print("#ifdef ",dataset_tmp.upper().replace("-","_"), 			file = file_h)
+		print("\n/* %s Dataset */\n"%dataset_tmp.upper(), 							file = file_h)
+
+		print("#define INPUT_DATATYPE %s"%in_dtype,	file = file_h)
+		print("#define FEATURES_DATATYPE %s"%f_dtype,	file = file_h)
+		print("#define THRESHOLD_DATATYPE float\n",	file = file_h)
+		print("void randomForest(%s *input, int *class_rf_idx);"%(in_dtype), file = file_h)
+
+		print("\n#endif \n\n", file = file_h)
+
 	print("\n#endif", 												file = file_h)

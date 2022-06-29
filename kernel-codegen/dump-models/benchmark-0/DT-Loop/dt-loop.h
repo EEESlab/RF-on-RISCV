@@ -15,6 +15,11 @@ struct Node
     uint32_t right;
 };
 
+#define INPUT_DATATYPE uint16_t
+#define INPUT_BYTES 2
+#define FEATURES_DATATYPE int16_t
+#define THRESHOLD_DATATYPE float
+#define CHILDREN_DATATYPE uint32_t
 
 /*    TREE 0    */
 /* L1 Memory Requirements = 2.54kB */
@@ -3633,6 +3638,11 @@ struct Node
     uint32_t right;
 };
 
+#define INPUT_DATATYPE uint16_t
+#define INPUT_BYTES 2
+#define FEATURES_DATATYPE int8_t
+#define THRESHOLD_DATATYPE float
+#define CHILDREN_DATATYPE uint32_t
 
 /*    TREE 0    */
 /* L1 Memory Requirements = 2.54kB */

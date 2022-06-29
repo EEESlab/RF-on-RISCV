@@ -3,7 +3,7 @@
 #include "dt-rec.h"
 #include "dt-rec-utils.h"
 
-int dt_rec(float *input, struct Node *decision_tree)
+int dt_rec(INPUT_DATATYPE *input, struct Node *decision_tree)
 {
 
 	if(input[decision_tree->index] <= decision_tree->value)
@@ -28,7 +28,7 @@ int dt_rec(float *input, struct Node *decision_tree)
     }
 }
 
-void rf_rec(float *input, struct Node **randomForest, int *vote_max_id, int n_estimators, int n_class)
+void rf_rec(INPUT_DATATYPE *input, struct Node **randomForest, int *vote_max_id, int n_estimators, int n_class)
 {
 	int score[N_CLASS] = {0};
 	*vote_max_id = 0;

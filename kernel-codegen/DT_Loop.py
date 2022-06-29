@@ -6,7 +6,6 @@ import os
 from utils_dataset import dataset_selection
 
 
-
 # Print rf as loop
 def dump_DT_Loop_kernel(models, file, n_classes, dataset):
 	file_c = file[0]
@@ -95,7 +94,7 @@ def dump_DT_Loop_kernel(models, file, n_classes, dataset):
 		dataset_tmp = dataset[k]
 		classes_tmp = int(n_classes[k])
 
-		__,__,__,__,__,__,f_dtype,__,__,__,__ = dataset_selection(dataset[k])
+		__,__,__,__,__,__,f_dtype,__,__,in_dtype,in_bytewidth = dataset_selection(dataset[k])
 
 		print("\n\n#ifdef ",dataset_tmp.upper().replace("-","_"), 			file = file_h)
 		print("\n/* %s Dataset */"%dataset_tmp.upper(), file = file_h)
@@ -109,7 +108,13 @@ def dump_DT_Loop_kernel(models, file, n_classes, dataset):
 		print("    float value;", file = file_h)
 		print("    uint32_t left;", file = file_h)
 		print("    uint32_t right;", file = file_h)
-		print("};\n\n", file = file_h)
+		print("};\n", file = file_h)
+
+		print("#define INPUT_DATATYPE %s"%in_dtype,	file = file_h)
+		print("#define INPUT_BYTES %s"%in_bytewidth,	file = file_h)		
+		print("#define FEATURES_DATATYPE %s"%f_dtype,	file = file_h)
+		print("#define THRESHOLD_DATATYPE float",	file = file_h)
+		print("#define CHILDREN_DATATYPE uint32_t\n",	file = file_h)
 
 		for j in range(0,n_estimators):
 			print("/*    TREE %d    */"%j,file = file_h)

@@ -17,6 +17,10 @@ struct Node
     uint8_t right_leaf;
 };
 
+#define INPUT_DATATYPE uint16_t
+#define FEATURES_DATATYPE int16_t
+#define THRESHOLD_DATATYPE float
+
 /*    TREE 0    */
 /* L1 Memory Requirements = 1.71kB */
 
@@ -1861,6 +1865,10 @@ struct Node
     uint8_t left_leaf;
     uint8_t right_leaf;
 };
+
+#define INPUT_DATATYPE uint16_t
+#define FEATURES_DATATYPE int8_t
+#define THRESHOLD_DATATYPE float
 
 /*    TREE 0    */
 /* L1 Memory Requirements = 1.46kB */

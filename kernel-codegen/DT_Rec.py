@@ -107,7 +107,7 @@ def dump_DT_Rec_kernel(models, file, n_classes, dataset):
 		dataset_tmp = dataset[k]
 		classes_tmp = int(n_classes[k])
 
-		__,__,__,__,__,__,f_dtype,__,__,__,__ = dataset_selection(dataset[k])
+		__,__,__,__,__,__,f_dtype,__,__,in_dtype,__ = dataset_selection(dataset[k])
 		__,c_dtype,__,__ = class_spec(classes_tmp)
 
 		memory = np.zeros(n_estimators)
@@ -134,6 +134,10 @@ def dump_DT_Rec_kernel(models, file, n_classes, dataset):
 		print("    %s left_leaf;"%c_dtype, file = file_h)
 		print("    %s right_leaf;"%c_dtype, file = file_h)
 		print("};\n", file = file_h)
+
+		print("#define INPUT_DATATYPE %s"%in_dtype,	file = file_h)
+		print("#define FEATURES_DATATYPE %s"%f_dtype,	file = file_h)
+		print("#define THRESHOLD_DATATYPE float\n",	file = file_h)
 
 		for j in range(0,n_estimators):
 			print("/*    TREE %d    */"%j,file = file_h)

@@ -5,7 +5,7 @@
 
 
 
-void rf2loop_prediction(float *input, struct Node **randomForest, int *vote_max_id, int n_estimators, int n_class)
+void rf2loop_prediction(INPUT_DATATYPE *input, struct Node **randomForest, int *vote_max_id, int n_estimators, int n_class)
 {
 	int score[N_CLASS] = {0};
 	*vote_max_id = 0;
@@ -24,7 +24,7 @@ void rf2loop_prediction(float *input, struct Node **randomForest, int *vote_max_
 
 
 
-int rf2loop(float *input, struct Node *node)
+int rf2loop(INPUT_DATATYPE *input, struct Node *node)
 {
     struct Node *current_node = node;
     int cmp = 0;

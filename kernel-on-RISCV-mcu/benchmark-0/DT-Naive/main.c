@@ -22,8 +22,6 @@ void cluster_rf(void *arg)
 
     ENTER_LOOP_FPU();
     START_STATS_FPU();
-    
-    uint32_t core_id = pi_core_id();
 
     randomForest(arg, &class_idx);
 
@@ -43,7 +41,7 @@ void cluster_delegate(void *arg)
     for (int i = 0; i < N_LOOP; i++)
     {
         /* Task dispatch to cluster cores. */
-        pi_cl_team_fork(N_CORES, cluster_rf, ((float *) x_test) + i*DIM);
+        pi_cl_team_fork(N_CORES, cluster_rf, (INPUT_DATATYPE *) x_test + i*DIM);
         START_DEBUG();
     }
     
