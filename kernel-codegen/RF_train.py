@@ -7,16 +7,11 @@ import os
 from utils_dataset import dataset_selection
 
 
-def rf_train(params = {"n_estimators":1}, dataset = ['digits'], exploration = 'test'):
+def rf_train(params = {"n_estimators":1}, dataset = ['digits'], exploration = 'test', scaler = False, feature_range = (0,255), input_bits = 16):
 	n_dataset = len(dataset)
 	accuracy = np.zeros(n_dataset)
 	n_features = np.zeros(n_dataset)
 	n_classes = np.zeros(n_dataset)
-	f_dtype = n_dataset * [None]
-	f_bytewidth = np.zeros(n_dataset)
-	in_int = np.zeros(n_dataset)
-	in_dtype = n_dataset * [None]
-	in_bytewidth = np.zeros(n_dataset)
 	model = []
 
 	model_dir = 'trained-models/%s'%(exploration)
@@ -26,8 +21,7 @@ def rf_train(params = {"n_estimators":1}, dataset = ['digits'], exploration = 't
 		__dataset = dataset[i]
 		model_name 	= '/rf-%dtrees-%s.joblib'%(params["n_estimators"],__dataset)
 
-		x_train, x_test, y_train, y_test, n_classes[i], n_features[i], f_dtype[i], \
-			f_bytewidth[i], in_int[i], in_dtype[i], in_bytewidth[i] = dataset_selection(__dataset)
+		x_train, x_test, y_train, y_test, n_classes[i], n_features[i] = dataset_selection(dataset = __dataset, scaler = scaler, feature_range = feature_range, input_bits = input_bits)
 
 		if (os.path.isfile(str(model_dir)+str(model_name))):
 			model.append(load(str(model_dir)+str(model_name)))
@@ -39,4 +33,4 @@ def rf_train(params = {"n_estimators":1}, dataset = ['digits'], exploration = 't
 
 		accuracy[i] = accuracy_score(y_test, model[i].predict(x_test)) * 100
 
-	return model, accuracy, x_test, y_test, n_classes, n_features, f_dtype, f_bytewidth, in_int, in_dtype, in_bytewidth
+	return model, accuracy, x_test, y_test, n_classes, n_features

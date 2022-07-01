@@ -1,7 +1,8 @@
 from sklearn.datasets import make_classification, fetch_openml, load_digits
-from sklearn.model_selection import train_test_split
 from keras.datasets import cifar10, cifar100, mnist, fashion_mnist
+from sklearn.model_selection import train_test_split
 from extra_keras_datasets import usps
+from sklearn import preprocessing
 
 import numpy as np
 import pandas as pd
@@ -32,57 +33,22 @@ dataset_supported = [
 
 
 
-def dataset_spec(x):
-	# f: features
-	# in:input
+def scaler_quantizer(x_train, x_test, feature_range, input_bits):
+	scaler = preprocessing.MinMaxScaler(feature_range = feature_range)
+	scaler.fit(np.concatenate((x_train,x_test)))
+	x_train = scaler.transform(x_train)
+	x_test = scaler.transform(x_test)
 
-	f = x.shape[1]
-	f_int = True
-	f_bits = f.bit_length() + 1
-	
-	if f_int == True:
-		if (0 < f_bits <= 8):
-			f_dtype = 'int8_t'
-			f_bytewidth = 1
-		elif (8 < f_bits <= 16):
-			f_dtype = 'int16_t'
-			f_bytewidth = 2
-		elif (16 < f_bits):
-			f_dtype = 'int32_t'
-			f_bytewidth = 4
+	max_bits = int(np.amax(np.concatenate((x_train,x_test)))).bit_length()
+	min_bits = int(np.amin(np.concatenate((x_train,x_test)))).bit_length()
+	sign_bit = (np.amin(np.concatenate((x_train,x_test))) < 0)
+	int_bits = max(min_bits,max_bits) + sign_bit
+	fract_bits = input_bits - int_bits
 
-	in_int = (x.astype(int) == x).all()
-	in_max_bits = int(np.amax(x)).bit_length()
-	in_min_bits = int(np.amin(x)).bit_length()
-	sign = (np.amin(x) < 0)
-	in_bits = max(in_min_bits,in_max_bits) + sign
+	x_train = np.int32(np.round_(np.float32(x_train) * (1 << fract_bits)))
+	x_test  = np.int32(np.round_(np.float32(x_test) * (1 << fract_bits)))
 
-	if in_int == True:
-		if (0 < in_bits <= 8):
-			in_bytewidth = 1
-			if (sign == 0):
-				in_dtype = 'uint8_t'
-			else:
-				in_dtype = 'int8_t'
-		
-		elif (8 < in_bits <= 16):
-			in_bytewidth = 2
-			if (sign == 0):
-				in_dtype = 'uint16_t'
-			else:
-				in_dtype = 'int16_t'
-		
-		elif (16 < in_bits):
-			in_bytewidth = 4
-			if (sign == 0):
-				in_dtype = 'uint32_t'
-			else:
-				in_dtype = 'int32_t'
-	else:
-		in_bytewidth = 4
-		in_dtype = 'float'
-
-	return f_int, f_dtype, f_bits, f_bytewidth, in_int, in_dtype, in_bits, in_bytewidth
+	return x_train, x_test, fract_bits, sign_bit
 
 
 
@@ -106,7 +72,7 @@ def class_spec(classes):
 
 
 
-def dataset_selection(dataset, version = 1, train_size = 0.7):
+def dataset_selection(dataset, version = 1, train_size = 0.7, scaler = False, feature_range = (0,255), input_bits = 16):
 
 	if (dataset == 'fashion-mnist'):
 
@@ -215,9 +181,11 @@ def dataset_selection(dataset, version = 1, train_size = 0.7):
 
 		raise Exception('Dataset not supported!')
 	
-	__, f_dtype, __, f_bytewidth, in_int, in_dtype, __, in_bytewidth = dataset_spec(np.concatenate((x_train,x_test)))
+	if scaler == True:
+		x_train, x_test, fract_bits, sign_bit = scaler_quantizer(x_train, x_test, feature_range, input_bits)
+
 	n_classes  = np.unique(y_test).shape[0]
 	y_test  = y_test.ravel()
 	y_train = y_train.ravel()
 	
-	return x_train, x_test, y_train, y_test, n_classes, n_features, f_dtype, f_bytewidth, in_int, in_dtype, in_bytewidth
+	return x_train, x_test, y_train, y_test, n_classes, n_features

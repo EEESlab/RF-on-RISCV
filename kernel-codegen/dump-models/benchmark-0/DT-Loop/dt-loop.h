@@ -5,9 +5,9 @@
 #ifdef  MFEAT_FACTORS
 
 /* MFEAT-FACTORS Dataset */
-/* Total L1 Memory Requirements = 43.60kB */
+/* Total L1 Memory Requirements = 49.51kB */
 
-struct Node
+struct /* __attribute__ ((__packed__)) */ Node
 {
     int16_t index;
     float value;
@@ -22,7 +22,7 @@ struct Node
 #define CHILDREN_DATATYPE uint32_t
 
 /*    TREE 0    */
-/* L1 Memory Requirements = 2.54kB */
+/* L1 Memory Requirements = 3.21kB */
 
 struct Node tree0_Node_228;
 struct Node tree0_Node_227;
@@ -255,7 +255,7 @@ struct Node tree0_Node_1;
 struct Node tree0_Node_0;
 
 /*    TREE 1    */
-/* L1 Memory Requirements = 2.46kB */
+/* L1 Memory Requirements = 2.79kB */
 
 struct Node tree1_Node_198;
 struct Node tree1_Node_197;
@@ -458,7 +458,7 @@ struct Node tree1_Node_1;
 struct Node tree1_Node_0;
 
 /*    TREE 2    */
-/* L1 Memory Requirements = 2.87kB */
+/* L1 Memory Requirements = 2.98kB */
 
 struct Node tree2_Node_212;
 struct Node tree2_Node_211;
@@ -675,7 +675,7 @@ struct Node tree2_Node_1;
 struct Node tree2_Node_0;
 
 /*    TREE 3    */
-/* L1 Memory Requirements = 2.64kB */
+/* L1 Memory Requirements = 2.84kB */
 
 struct Node tree3_Node_202;
 struct Node tree3_Node_201;
@@ -882,7 +882,7 @@ struct Node tree3_Node_1;
 struct Node tree3_Node_0;
 
 /*    TREE 4    */
-/* L1 Memory Requirements = 2.69kB */
+/* L1 Memory Requirements = 3.40kB */
 
 struct Node tree4_Node_242;
 struct Node tree4_Node_241;
@@ -1129,7 +1129,7 @@ struct Node tree4_Node_1;
 struct Node tree4_Node_0;
 
 /*    TREE 5    */
-/* L1 Memory Requirements = 2.64kB */
+/* L1 Memory Requirements = 3.09kB */
 
 struct Node tree5_Node_220;
 struct Node tree5_Node_219;
@@ -1354,7 +1354,7 @@ struct Node tree5_Node_1;
 struct Node tree5_Node_0;
 
 /*    TREE 6    */
-/* L1 Memory Requirements = 2.93kB */
+/* L1 Memory Requirements = 3.18kB */
 
 struct Node tree6_Node_226;
 struct Node tree6_Node_225;
@@ -1585,7 +1585,7 @@ struct Node tree6_Node_1;
 struct Node tree6_Node_0;
 
 /*    TREE 7    */
-/* L1 Memory Requirements = 2.61kB */
+/* L1 Memory Requirements = 3.09kB */
 
 struct Node tree7_Node_220;
 struct Node tree7_Node_219;
@@ -1810,7 +1810,7 @@ struct Node tree7_Node_1;
 struct Node tree7_Node_0;
 
 /*    TREE 8    */
-/* L1 Memory Requirements = 2.61kB */
+/* L1 Memory Requirements = 3.07kB */
 
 struct Node tree8_Node_218;
 struct Node tree8_Node_217;
@@ -2033,7 +2033,7 @@ struct Node tree8_Node_1;
 struct Node tree8_Node_0;
 
 /*    TREE 9    */
-/* L1 Memory Requirements = 2.79kB */
+/* L1 Memory Requirements = 3.01kB */
 
 struct Node tree9_Node_214;
 struct Node tree9_Node_213;
@@ -2252,7 +2252,7 @@ struct Node tree9_Node_1;
 struct Node tree9_Node_0;
 
 /*    TREE 10    */
-/* L1 Memory Requirements = 2.64kB */
+/* L1 Memory Requirements = 3.09kB */
 
 struct Node tree10_Node_220;
 struct Node tree10_Node_219;
@@ -2477,7 +2477,7 @@ struct Node tree10_Node_1;
 struct Node tree10_Node_0;
 
 /*    TREE 11    */
-/* L1 Memory Requirements = 2.79kB */
+/* L1 Memory Requirements = 2.84kB */
 
 struct Node tree11_Node_202;
 struct Node tree11_Node_201;
@@ -2684,7 +2684,7 @@ struct Node tree11_Node_1;
 struct Node tree11_Node_0;
 
 /*    TREE 12    */
-/* L1 Memory Requirements = 2.61kB */
+/* L1 Memory Requirements = 2.90kB */
 
 struct Node tree12_Node_206;
 struct Node tree12_Node_205;
@@ -2895,7 +2895,7 @@ struct Node tree12_Node_1;
 struct Node tree12_Node_0;
 
 /*    TREE 13    */
-/* L1 Memory Requirements = 3.21kB */
+/* L1 Memory Requirements = 3.23kB */
 
 struct Node tree13_Node_230;
 struct Node tree13_Node_229;
@@ -3130,7 +3130,7 @@ struct Node tree13_Node_1;
 struct Node tree13_Node_0;
 
 /*    TREE 14    */
-/* L1 Memory Requirements = 2.54kB */
+/* L1 Memory Requirements = 3.37kB */
 
 struct Node tree14_Node_240;
 struct Node tree14_Node_239;
@@ -3375,7 +3375,7 @@ struct Node tree14_Node_1;
 struct Node tree14_Node_0;
 
 /*    TREE 15    */
-/* L1 Memory Requirements = 2.82kB */
+/* L1 Memory Requirements = 3.35kB */
 
 struct Node tree15_Node_238;
 struct Node tree15_Node_237;
@@ -3628,9 +3628,9 @@ struct Node *randomForest[N_TREES];
 #ifdef  VEHICLE
 
 /* VEHICLE Dataset */
-/* Total L1 Memory Requirements = 43.60kB */
+/* Total L1 Memory Requirements = 43.46kB */
 
-struct Node
+struct /* __attribute__ ((__packed__)) */ Node
 {
     int8_t index;
     float value;

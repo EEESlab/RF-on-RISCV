@@ -3,78 +3,75 @@ from joblib import dump, load
 import numpy as np
 import os 
 
-from utils_dataset import dataset_selection
+from utils_dump import bytewidth, feature_to_unsigned_int, threshold_to_unsigned_int
+from utils_graph import rfNodeCount
 
 
-# Print rf as loop
-def dump_DT_Loop_kernel(models, file, n_classes, dataset):
+
+def model_memory(model, f_bytewidth, thr_bytewidth, child_bytewidth):
+	n_estimators = model.n_estimators
+	node_bytes = f_bytewidth + thr_bytewidth + child_bytewidth * 2
+	treeNodes = rfNodeCount(model)
+	treeMem = treeNodes * node_bytes * 0.001
+	pointerMem = n_estimators * 4 * 0.001
+	modelMem = np.sum(treeMem) + pointerMem
+	return treeMem, pointerMem, modelMem 
+
+
+
+def dump_DT_Loop_kernel(models, file, n_classes, dataset, in_dtype, f_dtype, thr_dtype):
 	file_c = file[0]
 	file_h = file[1]
+	n = len(dataset)
+
+	child_dtype = 'uint32_t'
+	child_bytewidth = 4
 
 	# Dump "C" source file
 	print("#include \"pmsis.h\"", 	 		file = file_c)
 	print("#include \"params.h\"", 	 		file = file_c)
-	print("#include \"dt-loop.h\"\n\n", 		file = file_c)
+	print("#include \"dt-loop.h\"\n\n", 	file = file_c)
 
-	n_dataset = len(dataset)
+	for i in range(0, n):
+		__model = models[i]
+		__dataset = dataset[i]
+		__class = int(n_classes[i])
+		n_estimators = __model.n_estimators
 
-	for k in range(0, n_dataset):
+		treeMem, pointerMem, modelMem = model_memory(__model, bytewidth(f_dtype[i]), bytewidth(thr_dtype[i]), child_bytewidth)
 
-		rf_model = models[k]
-		dataset_tmp = dataset[k]
-		classes_tmp = int(n_classes[k])
-
-		__,__,__,__,__,__,__,f_bytewidth,__,__,__ = dataset_selection(dataset[k])
-
-		print("#ifdef ",dataset_tmp.upper().replace("-","_"), 			file = file_c)
-		print("\n/* %s Dataset */"%dataset_tmp.upper(), file = file_c)
-
-		n_estimators = rf_model.n_estimators
-
-		memory = np.zeros(n_estimators)
-		l1_memory = 0
-		total_byte = 3*4 + f_bytewidth
-		for i in range(0,n_estimators):
-			estimator = rf_model.estimators_[i]
-			n_nodes = estimator.tree_.node_count
-			memory[i] = n_nodes*total_byte*0.001 
-			l1_memory += memory[i]
-
-		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(l1_memory+ total_byte*n_estimators*0.001), file = file_c)
+		print("#ifdef ",__dataset.upper().replace("-","_"), 			file = file_c)
+		print("\n/* %s Dataset */"%__dataset.upper(), file = file_c)
+		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(modelMem), file = file_c)
 
 		for j in range(0,n_estimators):
 			print("/*    TREE %d    */"%j,	file = file_c)
-			print("/* L1 Memory Requirements = %.2fkB */\n"%(memory[j]), file = file_c)
+			print("/* L1 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = file_c)
 	
-			estimator = rf_model.estimators_[j]
+			estimator = __model.estimators_[j]
 			n_nodes = estimator.tree_.node_count
 			children_left = estimator.tree_.children_left
 			children_right = estimator.tree_.children_right
 			feature = estimator.tree_.feature
 			threshold = estimator.tree_.threshold
-			value = estimator.tree_.value
-			value = np.reshape(value,(-1,classes_tmp))
+			value = np.reshape(estimator.tree_.value,(-1,__class))
 			
 			classes = []
-			for i in range(0,max(np.shape(value))):
-				classes.append(value[i].argmax())
-	
-			vote_classes = []
-			for i in range(0,max(np.shape(value))):
-				vote_classes.append(int(value[i,value[i].argmax()]))		
-	
-			for i in range(n_nodes - 1,-1,-1):
-				print("PI_CL_L1 struct Node tree%d_Node_%d = (struct Node) { %d, %ff, "%(j, i, feature[i], threshold[i]), end = '',	file = file_c)
+			for k in range(0,max(np.shape(value))):
+				classes.append(value[k].argmax())
+
+			for k in range(n_nodes - 1,-1,-1):
+				print("PI_CL_L1 struct Node tree%d_Node_%d = (struct Node) { %d, %ff, "%(j, k, feature[k], threshold[k]), end = '',	file = file_c)
 		
-				if (children_left[i] == -1):
-					print("%d, "%classes[i], end = '',file = file_c)
+				if (children_left[k] == -1):
+					print("%d, "%classes[k], end = '',file = file_c)
 				else:
-					print("(int) &tree%d_Node_%d, "%(j, children_left[i]), end = '', file = file_c)
+					print("(uint32_t) &tree%d_Node_%d, "%(j, children_left[k]), end = '', file = file_c)
 		
-				if (children_right[i] == -1):
-					print("%d};"%classes[i], file = file_c)
+				if (children_right[k] == -1):
+					print("%d};"%classes[k], file = file_c)
 				else:
-					print("(int) &tree%d_Node_%d};"%(j, children_right[i]), file = file_c)
+					print("(uint32_t) &tree%d_Node_%d};"%(j, children_right[k]), file = file_c)
 			
 			print("", file = file_c)
 
@@ -89,56 +86,42 @@ def dump_DT_Loop_kernel(models, file, n_classes, dataset):
 	print("#ifndef __DT_LOOP_H__", 	 file = file_h)
 	print("#define __DT_LOOP_H__", 	 file = file_h)
 
-	for k in range(0, n_dataset):
-		rf_model = models[k]
-		dataset_tmp = dataset[k]
-		classes_tmp = int(n_classes[k])
+	for i in range(0, n):
+		__model = models[i]
+		__dataset = dataset[i]
+		__class = int(n_classes[i])
+		n_estimators = __model.n_estimators
 
-		__,__,__,__,__,__,f_dtype,__,__,in_dtype,in_bytewidth = dataset_selection(dataset[k])
+		treeMem, pointerMem, modelMem = model_memory(__model, bytewidth(f_dtype[i]), bytewidth(thr_dtype[i]), child_bytewidth)
 
-		print("\n\n#ifdef ",dataset_tmp.upper().replace("-","_"), 			file = file_h)
-		print("\n/* %s Dataset */"%dataset_tmp.upper(), file = file_h)
-		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(l1_memory + total_byte*n_estimators*0.001), file = file_h)
+		print("\n\n#ifdef ",__dataset.upper().replace("-","_"), 			file = file_h)
+		print("\n/* %s Dataset */"%__dataset.upper(), file = file_h)
+		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(modelMem), file = file_h)
 
-		n_estimators = rf_model.n_estimators
 
-		print("struct Node", file = file_h)
-		print("{", file = file_h)
-		print("    %s index;"%f_dtype, file = file_h)
-		print("    float value;", file = file_h)
-		print("    uint32_t left;", file = file_h)
-		print("    uint32_t right;", file = file_h)
+		print("struct /* __attribute__ ((__packed__)) */ Node", file = file_h)
+		print("{", 		file = file_h)
+		print("    %s index;"%f_dtype[i], file = file_h)
+		print("    %s value;"%thr_dtype[i], file = file_h)
+		print("    %s left;"%child_dtype, file = file_h)
+		print("    %s right;"%child_dtype, file = file_h)
 		print("};\n", file = file_h)
 
-		print("#define INPUT_DATATYPE %s"%in_dtype,	file = file_h)
-		print("#define INPUT_BYTES %s"%in_bytewidth,	file = file_h)		
-		print("#define FEATURES_DATATYPE %s"%f_dtype,	file = file_h)
-		print("#define THRESHOLD_DATATYPE float",	file = file_h)
-		print("#define CHILDREN_DATATYPE uint32_t\n",	file = file_h)
+		print("#define INPUT_DATATYPE %s"%in_dtype[i],	file = file_h)
+		print("#define INPUT_BYTES %s"%bytewidth(in_dtype[i]),	file = file_h)		
+		print("#define FEATURES_DATATYPE %s"%f_dtype[i],	file = file_h)
+		print("#define THRESHOLD_DATATYPE %s"%thr_dtype[i],	file = file_h)
+		print("#define CHILDREN_DATATYPE %s\n"%child_dtype,	file = file_h)
 
 		for j in range(0,n_estimators):
 			print("/*    TREE %d    */"%j,file = file_h)
-			print("/* L1 Memory Requirements = %.2fkB */\n"%(memory[j]), file = file_h)
+			print("/* L1 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = file_h)
 	
-			estimator = rf_model.estimators_[j]
+			estimator = __model.estimators_[j]
 			n_nodes = estimator.tree_.node_count
-			children_left = estimator.tree_.children_left
-			children_right = estimator.tree_.children_right
-			feature = estimator.tree_.feature
-			threshold = estimator.tree_.threshold
-			value = estimator.tree_.value
-			value = np.reshape(value,(-1,classes_tmp))
-			
-			classes = []
-			for i in range(0,max(np.shape(value))):
-				classes.append(value[i].argmax())
 	
-			vote_classes = []
-			for i in range(0,max(np.shape(value))):
-				vote_classes.append(int(value[i,value[i].argmax()]))		
-	
-			for i in range(n_nodes - 1,-1,-1):
-					print("struct Node tree%d_Node_%d;"%(j,i), file = file_h)
+			for k in range(n_nodes - 1,-1,-1):
+					print("struct Node tree%d_Node_%d;"%(j,k), file = file_h)
 		
 			print("",file = file_h)
 	
@@ -148,4 +131,118 @@ def dump_DT_Loop_kernel(models, file, n_classes, dataset):
 
 	print("#endif",file = file_h)
 
-	return l1_memory
+
+
+# dump_DT_Loop_Quantized_kernel takes model trained on quantized dataset, 
+# converts feature to uint removing -2 value with max_feature + 1, converts
+# threshold to uint rounding to lowest integer removing -2 value with 100.
+
+def dump_DT_Loop_Quantized_kernel(model, file, n_classes, dataset, in_dtype):
+	file_c = file[0]
+	file_h = file[1]
+	n = len(dataset)
+
+	child_dtype = 'uint32_t'
+	child_bytewidth = 4
+
+	# Dump "C" source file
+	print("#include \"pmsis.h\"", 	 		file = file_c)
+	print("#include \"params.h\"", 	 		file = file_c)
+	print("#include \"dt-loop-quantized.h\"\n\n", 	file = file_c)
+
+	for i in range(0, n):
+		__model = model[i]
+		__dataset = dataset[i]
+		__classes = int(n_classes[i])
+		n_estimators = __model.n_estimators
+
+		f, __, f_bytewidth, __, __ = feature_to_unsigned_int(__model)
+		thr, __, thr_bytewidth, __ = threshold_to_unsigned_int(__model)
+		treeMem, pointerMem, modelMem = model_memory(__model, f_bytewidth, thr_bytewidth, child_bytewidth)
+
+		print("#ifdef ",__dataset.upper().replace("-","_"), 			file = file_c)
+		print("\n/* %s Dataset */"%__dataset.upper(), 					file = file_c)
+		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(modelMem), file = file_c)
+
+		for j in range(0,n_estimators):
+			print("/*    TREE %d    */"%j,	file = file_c)
+			print("/* L1 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = file_c)
+	
+			estimator = __model.estimators_[j]
+			n_nodes = estimator.tree_.node_count
+			children_left = estimator.tree_.children_left
+			children_right = estimator.tree_.children_right
+			__f = f[j]
+			__thr = thr[j]
+			value = np.reshape(estimator.tree_.value,(-1,__classes))
+
+			classes = []
+			for k in range(0,max(np.shape(value))):
+				classes.append(value[k].argmax())
+	
+			for k in range(n_nodes - 1,-1,-1):
+				print("PI_CL_L1 struct Node tree%d_Node_%d = (struct Node) { %d, %d, "%(j, k, __f[k], __thr[k]), end = '',	file = file_c)
+		
+				if (children_left[k] == -1):
+					print("%d, "%classes[k], end = '',file = file_c)
+				else:
+					print("(uint32_t) &tree%d_Node_%d, "%(j, children_left[k]), end = '', file = file_c)
+		
+				if (children_right[k] == -1):
+					print("%d};"%classes[k], file = file_c)
+				else:
+					print("(uint32_t) &tree%d_Node_%d};"%(j, children_right[k]), file = file_c)
+			
+			print("", file = file_c)
+
+		print("/*    Random Forest    */",file = file_c)
+		print("PI_CL_L1 struct Node *randomForest[N_TREES] = \n{\n",file = file_c)
+		for j in range(0,n_estimators):
+			print("    &tree%d_Node_0,"%j,file = file_c)
+		print("\n};",file = file_c)
+		print("\n#endif \n\n", file = file_c)		
+
+	# Dump "h" header file
+	print("#ifndef __DT_LOOP_QUANTIZED_H__", 	 file = file_h)
+	print("#define __DT_LOOP_QUANTIZED_H__", 	 file = file_h)
+
+	for i in range(0, n):
+		__model = model[i]
+		__dataset = dataset[i]
+		__classes = int(n_classes[i])
+		n_estimators = __model.n_estimators
+
+		__, f_dtype, f_bytewidth, __, __ = feature_to_unsigned_int(__model)
+		__, thr_dtype, thr_bytewidth, __ = threshold_to_unsigned_int(__model)
+		treeMem, pointerMem, modelMem = model_memory(__model, f_bytewidth, thr_bytewidth, child_bytewidth)
+
+		print("\n\n#ifdef ",__dataset.upper().replace("-","_"), 			file = file_h)
+		print("\n/* %s Dataset */"%__dataset.upper(), 						file = file_h)
+		print("/* Total L1 Memory Requirements = %.2fkB */\n"%(modelMem), 	file = file_h)
+
+		print("struct /* __attribute__ ((__packed__)) */ Node", file = file_h)
+		print("{", 	file = file_h)
+		print("    %s index;"%f_dtype, file = file_h)
+		print("    %s value;"%thr_dtype, file = file_h)
+		print("    %s left;"%child_dtype, file = file_h)
+		print("    %s right;"%child_dtype, file = file_h)
+		print("};\n", file = file_h)
+
+		print("#define INPUT_DATATYPE %s"%in_dtype[i],	file = file_h)
+		print("#define INPUT_BYTES %s"%bytewidth(in_dtype[i]),	file = file_h)		
+		print("#define FEATURES_DATATYPE %s"%f_dtype,	file = file_h)
+		print("#define THRESHOLD_DATATYPE %s"%thr_dtype,	file = file_h)
+		print("#define CHILDREN_DATATYPE %s\n"%child_dtype,	file = file_h)
+
+		for j in range(0,n_estimators):
+			print("/*    TREE %d    */"%j,file = file_h)
+			print("/* L1 Memory Requirements = %.2fkB */\n"%(treeMem[j]), file = file_h)
+			for k in range(n_nodes - 1,-1,-1):
+					print("struct Node tree%d_Node_%d;"%(j,k), file = file_h)
+			print("",file = file_h)
+	
+		print("/*    Random Forest    */",file = file_h)
+		print("struct Node *randomForest[N_TREES];\n",file = file_h)
+		print("#endif\n\n",file = file_h)
+
+	print("#endif",file = file_h)

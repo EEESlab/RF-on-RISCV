@@ -158,7 +158,7 @@ float threshold_tree15[NODES_TREE_15];
 uint8_t children_left_tree15[NODES_TREE_15];
 uint8_t children_right_tree15[NODES_TREE_15];
 
-/* L1 Memory Requirements = 1.91kB */
+/* L1 Memory Requirements = 0.13kB */
 int16_t *features[N_TREES];
 float *threshold[N_TREES];
 uint8_t *children_left[N_TREES];
@@ -323,7 +323,7 @@ float threshold_tree15[NODES_TREE_15];
 uint8_t children_left_tree15[NODES_TREE_15];
 uint8_t children_right_tree15[NODES_TREE_15];
 
-/* L1 Memory Requirements = 1.52kB */
+/* L1 Memory Requirements = 0.11kB */
 int8_t *features[N_TREES];
 float *threshold[N_TREES];
 uint8_t *children_left[N_TREES];

@@ -24,7 +24,7 @@ def dump_test_data(x_test, y_test, memoryLoc, dataset, features, in_dtype, in_by
 
 		if memoryLoc == "L2": 
 			memAttr = "PI_L2"
-			L1Mem = 1 * __x_test_dim * 0.001
+			L1Mem = __x_test_dim * 0.001
 			L2Mem = __x_test_dim * __features * __in_bytewidth *  0.001
 		else:
 			memAttr = "PI_CL_L1"

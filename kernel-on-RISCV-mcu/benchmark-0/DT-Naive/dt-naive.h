@@ -6,7 +6,6 @@
 /* MFEAT-FACTORS Dataset */
 
 #define INPUT_DATATYPE uint16_t
-#define FEATURES_DATATYPE int16_t
 #define THRESHOLD_DATATYPE float
 
 void randomForest(uint16_t *input, int *class_rf_idx);
@@ -19,7 +18,6 @@ void randomForest(uint16_t *input, int *class_rf_idx);
 /* VEHICLE Dataset */
 
 #define INPUT_DATATYPE uint16_t
-#define FEATURES_DATATYPE int8_t
 #define THRESHOLD_DATATYPE float
 
 void randomForest(uint16_t *input, int *class_rf_idx);

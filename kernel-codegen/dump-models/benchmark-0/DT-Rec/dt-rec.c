@@ -6,7 +6,7 @@
 #ifdef  MFEAT_FACTORS
 
 /* MFEAT-FACTORS Dataset */
-/* Total L1 Memory Requirements = 28.38kB */
+/* Total L1 Memory Requirements = 28.19kB */
 
 /*    TREE 0    */
 /* L1 Memory Requirements = 1.82kB */
@@ -1859,7 +1859,7 @@ PI_CL_L1 struct Node *randomForest[N_TREES] =
 #ifdef  VEHICLE
 
 /* VEHICLE Dataset */
-/* Total L1 Memory Requirements = 25.16kB */
+/* Total L1 Memory Requirements = 24.98kB */
 
 /*    TREE 0    */
 /* L1 Memory Requirements = 1.46kB */
