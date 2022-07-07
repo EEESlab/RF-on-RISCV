@@ -80,7 +80,7 @@ def DT_decision_path(tree, x_test):
 
 
 
-def RF_check(exploration, test_number):
+def RF_check(exploration, test_number, scaler = False):
 	model_dir   = 'trained-models/%s'%(exploration)
 	n_models 	= len(os.listdir(model_dir))
 	__x_test = n_models * [None]
@@ -94,7 +94,7 @@ def RF_check(exploration, test_number):
 		print("Model : %s"%model_name)
 
 		dataset[i] = model_name.split('-',2)[-1].split('.')[0]
-		__,x_test,__,y_test,__,__,__,__,__,__,__ = dataset_selection(dataset[i])
+		__,x_test,__,y_test,__,__ = dataset_selection(dataset[i],scaler = scaler)
 
 		model[i] = load(str(model_dir)+'/'+str(model_name))
 		__x_test[i] = x_test[(int)(x_test.shape[0] - n_test):(int)(x_test.shape[0])].tolist()
@@ -111,35 +111,3 @@ def RF_check(exploration, test_number):
 		for k in range(0,n_estimators):
 			print("\n\nTree %d"%k)
 			DT_decision_path(model[i].estimators_[k],np.array(__x_test[i][test_number]).reshape(1,-1))
-
-
-
-def thresholds_quantization(exploration):
-	model_dir   = 'trained-models/%s'%(exploration)
-	n_models 	= len(os.listdir(model_dir))
-
-	for i in range(0,n_models):
-		model_name = os.listdir("trained-models/%s"%(exploration))[i]
-		print("\n\nModel : %s\n"%model_name)
-
-		model = load(str(model_dir)+'/'+str(model_name))
-		n_estimators = model.n_estimators
-		__bits = 0
-
-		for j in range(0,n_estimators):
-			feature = model.estimators_[j].tree_.feature
-			threshold = model.estimators_[j].tree_.threshold
-			for k in range(0,threshold.shape[0]):
-				if (threshold[k] == -2):
-					threshold[k] = 0
-
-			max_bits = int(np.amax(threshold)).bit_length()
-			min_bits = int(np.amin(threshold)).bit_length()
-			sign = (np.amin(threshold) < 0)
-			bits = max(min_bits,max_bits) + sign
-			if (bits > __bits): __bits = bits
-			print(threshold)
-			print(feature)
-			#print("Tree %d, _max = %f, _min = %f, max_bits = %d, min_bits = %d, sign = %d, bits = %d\n"%(j, _max, _min, max_bits, min_bits, sign, bits))
-
-		print(__bits)

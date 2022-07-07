@@ -220,7 +220,7 @@ def feature_to_unsigned_int(model, debug = False):
 	f_dtype = ''
 	f_bytewidth = 0
 	f_bits = 0
-	f_limit = model.n_features_
+	f_limit = model.n_features_in_
 
 	for i in range(0,n_dt):
 		__f = model.estimators_[i].tree_.feature

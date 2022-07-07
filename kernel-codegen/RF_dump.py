@@ -7,7 +7,7 @@ from DT_Naive import dump_DT_Naive_kernel, dump_DT_Naive_Quantized_kernel
 from DT_Loop import dump_DT_Loop_kernel, dump_DT_Loop_Quantized_kernel
 from DT_Rec import dump_DT_Rec_kernel, dump_DT_Rec_Quantized_kernel
 from DT_Arr import dump_DT_Arr_Stallfree_L1, dump_DT_Arr_Stallfree_L2, dump_DT_Arr_Shiftless_L2, dump_DT_Arr_Shiftless_L1, dump_DT_Arr_Baseline_L2, dump_DT_Arr_Baseline_L1
-from DT_Arr_Opt import dump_DT_Arr_Baseline_Opt_L1
+from DT_Arr import dump_DT_Arr_Baseline_Quantized_L1, dump_DT_Arr_Baseline_Quantized_L2
 
 from utils_dump import feature_dtype, input_dtype, threshold_dtype
 from utils_graph import DT_votes, DT_decision_path
@@ -77,7 +77,7 @@ def dump_RF(exploration, kernel, scaler = False, double_buffering = False):
 		dump_DT_Loop_kernel(model,[kernel_c,kernel_h],n_classes,dataset,in_dtype,f_dtype,thr_dtype)
 	if (kernel == 'DT-Loop-Quantized'):
 		dump_DT_Loop_Quantized_kernel(model,[kernel_c,kernel_h],n_classes,dataset,in_dtype)
-		
+
 	if (kernel == 'DT-Rec'):
 		dump_DT_Rec_kernel(model,[kernel_c,kernel_h],n_classes,dataset,in_dtype,f_dtype,thr_dtype)
 	if (kernel == 'DT-Rec-Quantized'):
@@ -88,6 +88,12 @@ def dump_RF(exploration, kernel, scaler = False, double_buffering = False):
 			dump_DT_Arr_Baseline_L1(model,[kernel_c,kernel_h],n_classes,dataset,in_dtype,f_dtype,thr_dtype)
 		else:
 			dump_DT_Arr_Baseline_L2(model,[kernel_c,kernel_h],n_classes,dataset,in_dtype,f_dtype,thr_dtype)
+
+	if (kernel == 'DT-Arr-Baseline-Quantized'):
+		if double_buffering == False:
+			dump_DT_Arr_Baseline_Quantized_L1(model,[kernel_c,kernel_h],n_classes,dataset,in_dtype)
+		else:
+			dump_DT_Arr_Baseline_Quantized_L2(model,[kernel_c,kernel_h],n_classes,dataset,in_dtype)
 
 	if (kernel == 'DT-Arr-Shiftless'):
 		if double_buffering == False:

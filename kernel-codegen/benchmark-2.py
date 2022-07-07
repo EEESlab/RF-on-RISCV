@@ -1,12 +1,12 @@
+from utils_double_buffering import L1_Buffer_Compute
 from RF_train import rf_train
-from utils_graph import thresholds_quantization
 from RF_dump import dump_RF
-from utils_graph import RF_check
- 	
 
-#thresholds_quantization(exploration = "benchmark-0")
+from joblib import dump, load
 
-#print(rf_train(params = {"n_estimators":16}, dataset = ['mfeat-factors'], exploration = 'test', scaler = True))
-#thresholds_quantization(exploration = "test")
 
-#dump_RF(exploration = "test", kernel = "dump_DT_Arr_Baseline_Opt_L1", double_buffering = False)
+#rf_train(params = {"n_estimators":96}, dataset = ['mfeat-factors'], exploration = 'benchmark-2', scaler = True)
+dump_RF(exploration = "benchmark-2", kernel = "DT-Arr-Baseline-Quantized", scaler = True, double_buffering = True)
+dump_RF(exploration = "benchmark-2", kernel = "DT-Arr-Baseline", scaler = True, double_buffering = True)
+
+L1_Buffer_Compute(load('trained-models/test/rf-96trees-mfeat-factors.joblib'))

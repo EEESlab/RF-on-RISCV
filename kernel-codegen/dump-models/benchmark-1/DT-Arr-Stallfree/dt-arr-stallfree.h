@@ -61,7 +61,7 @@
 #define THRESHOLD_DATATYPE float
 #define CHILDREN_DATATYPE uint16_t
 #define CHILDREN_BYTES (2)
-#define CHILDREN_BITS (16)
+#define CMP_SHIFT (4)
 #define BIGNODE_DATATYPE uint32_t
 #define NODE2FEAT_DTYPE (2) /* div shift */
 #define WHILE_CONDITION (-4)
