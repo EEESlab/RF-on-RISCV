@@ -1,4 +1,3 @@
-from ortools.linear_solver import pywraplp
 from joblib import dump, load
 from sklearn import tree 
 import numpy as np
@@ -77,6 +76,35 @@ def DT_decision_path(tree, x_test):
 				  inequality=threshold_sign,
 				  threshold=threshold[node_id])
 		)
+
+
+
+# Retrieve rf traversed branches by each tree
+def RF_decision_path(model, x_test):
+	n_estimators = model.n_estimators
+	x_test_size = x_test.shape[0]
+	decisions = np.zeros((x_test_size, n_estimators))
+
+	for i in range(0, x_test_size):
+		__x_test = x_test[i]
+		for j in range(0,n_estimators):
+			__decisions = 0
+			tree = model.estimators_[j]
+			node_indicator = tree.decision_path(x_test)	
+			leaf_id = tree.apply(x_test)
+
+			node_index = node_indicator.indices[node_indicator.indptr[i]:node_indicator.indptr[i + 1]]
+			for node_id in node_index:
+				if leaf_id[i] == node_id:
+					continue
+				__decisions += 1
+
+			decisions[i, j] = __decisions
+
+	decisions_sum =  np.sum(decisions)
+	decisions_avg = decisions_sum/x_test_size
+
+	return decisions_avg, decisions_sum, decisions, 
 
 
 
